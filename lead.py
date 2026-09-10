@@ -4,46 +4,27 @@ import time
 import pandas as pd
 import streamlit as st
 from bs4 import BeautifulSoup
-from pyvirtualdisplay import Display
-from seleniumbase import Driver
+from playwright.sync_api import sync_playwright
+from playwright_stealth import stealth_sync
 
-st.set_page_config(page_title="Tool Auto Scraper - Super Fast", page_icon="⚡")
-
-# Chèn đoạn này ngay sau st.set_page_config(...)
+# --- ẨN HEADER CSS ---
 hide_github_and_edit = """
     <style>
-    /* 1. Triệt hạ nút GitHub triệt để bằng mọi thuộc tính liên quan */
     a[href*="github"],
-    a[href*="github.com"],
-    [data-testid="stHeader"] a[href*="github"],
-    [data-testid="stAppHeader"] a[href*="github"],
     div[data-testid="stHeaderActionElements"] > a,
-    div[data-testid="stToolbar"] a[href*="github"] {
-        display: none !important;
-        visibility: hidden !important;
-        width: 0px !important;
-        height: 0px !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-    }
-
-    /* 2. Ẩn nút Edit (Cây bút) */
     button[title*="Edit"],
-    button[title*="Studio"],
-    button[aria-label*="Edit"],
-    [data-testid="stHeader"] button[title*="Edit"] {
+    button[title*="Studio"] {
         display: none !important;
-        visibility: hidden !important;
     }
     </style>
 """
 st.markdown(hide_github_and_edit, unsafe_allow_html=True)
 
-st.title("⚡ Tool Auto Scraper - Cào Dữ Liệu Siêu Tốc")
+st.title("⚡ Tool Auto Scraper - Bypass Cloudflare")
 
 url_input = st.text_input(
     "Dán URL cần cào:",
-    value="",
+    value="https://masothue.com/tra-cuu-ma-so-thue-theo-tinh/ho-chi-minh-23",
 )
 max_pages = st.number_input(
     "Số lượng trang muốn quét:", min_value=1, max_value=50, value=4
@@ -72,30 +53,41 @@ if start_button and url_input:
     visited_links = set()
     status_text = st.empty()
 
-    # Khởi tạo Màn hình ảo
-    display = Display(visible=0, size=(1920, 1080))
-    display.start()
+    with sync_playwright() as p:
+        # Khởi tạo Chromium dạng Headless tương thích Cloud
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-blink-features=AutomationControlled",
+            ],
+        )
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        )
+        page = context.new_page()
 
-    # Khởi tạo Driver tối ưu tốc độ (Chặn tải ảnh, font, media để load trang siêu nhanh)
-    driver = Driver(
-        uc=True,
-        headless=False,
-        chromium_arg="--blink-settings=imagesEnabled=false --disable-remote-fonts --disable-speech-api",
-    )
+        # Áp dụng Stealth để tránh bị phát hiện là Bot
+        stealth_sync(page)
 
-    try:
         current_url = url_input
 
         for page_idx in range(1, max_pages + 1):
             status_text.text(
-                f"⚡ Đang tải nhanh trang {page_idx}/{max_pages}: {current_url}"
+                f"⏳ Đang tải trang {page_idx}/{max_pages}: {current_url}"
             )
 
-            driver.uc_open_with_reconnect(current_url, reconnect_time=3)
-            time.sleep(1)  # Giảm thời gian chờ xuống 1s
+            try:
+                page.goto(
+                    current_url, wait_until="domcontentloaded", timeout=60000
+                )
+                time.sleep(2)
+            except Exception as e:
+                st.error(f"Lỗi tải trang {page_idx}: {e}")
+                break
 
-            page_source = driver.page_source
-            soup = BeautifulSoup(page_source, "html.parser")
+            soup = BeautifulSoup(page.content(), "html.parser")
 
             detail_links = []
             anchors = soup.select(
@@ -129,19 +121,18 @@ if start_button and url_input:
                 f" Tìm thấy {len(detail_links)} công ty ở trang {page_idx}."
             )
 
-            # Quét từng trang chi tiết
             for idx, link in enumerate(detail_links, 1):
                 status_text.text(
                     f"⚡ Trang {page_idx}/{max_pages} - Đang kiểm tra SĐT [{idx}/{len(detail_links)}]: {link}"
                 )
 
                 try:
-                    driver.uc_open_with_reconnect(link, reconnect_time=2)
-                    time.sleep(0.5)  # Giảm trễ giữa các lượt cào xuống 0.5s
-
-                    detail_soup = BeautifulSoup(
-                        driver.page_source, "html.parser"
+                    page.goto(
+                        link, wait_until="domcontentloaded", timeout=60000
                     )
+                    time.sleep(1)
+
+                    detail_soup = BeautifulSoup(page.content(), "html.parser")
 
                     phone = extract_phone(detail_soup)
                     if phone == "Không có" or not phone:
@@ -182,14 +173,12 @@ if start_button and url_input:
                 else f"{url_input}?page={page_idx + 1}"
             )
 
-    finally:
-        driver.quit()
-        display.stop()
+        browser.close()
 
     status_text.text("✅ Hoàn tất quá trình cào dữ liệu!")
 
     if all_data:
-        st.success(f"🎉 Đã thu thập xong {len(all_data)} công ty có SĐT!")
+        st.success(f"🎉 Đã thu thập được {len(all_data)} công ty có SĐT!")
         df = pd.DataFrame(all_data)
         st.dataframe(df)
 
