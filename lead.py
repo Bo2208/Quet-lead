@@ -7,32 +7,27 @@ from bs4 import BeautifulSoup
 from pyvirtualdisplay import Display
 from seleniumbase import Driver
 
-# Chèn đoạn này ngay sau st.set_page_config(...)
+st.set_page_config(page_title="Tool Auto Scraper - Super Fast", page_icon="⚡")
+
+# --- CSS TÙY CHỈNH GIAO DIỆN ---
 hide_github_and_edit = """
     <style>
-    /* 1. Ẩn nút GitHub (thẻ a dẫn đến github.com) */
+    /* Ẩn nút GitHub & Nút Edit */
     a[href*="github.com"], 
-    [data-testid="stHeader"] a[href*="github"] {
-        display: none !important;
-    }
-    
-    /* 2. Ẩn nút Edit / Open in Studio (nằm ở vị trí icon cây bút) */
     [data-testid="stHeader"] button[title*="Edit"],
     [data-testid="stHeader"] button[title*="Studio"],
-    [data-testid="stHeader"] button[aria-label*="Edit"],
-    [data-testid="stHeader"] button[aria-label*="Studio"] {
+    [data-testid="stHeader"] button[aria-label*="Edit"] {
         display: none !important;
     }
     </style>
 """
 st.markdown(hide_github_and_edit, unsafe_allow_html=True)
 
-st.set_page_config(page_title="Tool Auto Scraper (Cloud Server)", page_icon="🔍")
-st.title("🔍 Tool Auto Scraper - Chạy On-Cloud Bypass Cloudflare")
+st.title("⚡ Tool Auto Scraper - Cào Dữ Liệu Siêu Tốc")
 
 url_input = st.text_input(
     "Dán URL cần cào:",
-    value="",
+    value="https://masothue.com/tra-cuu-ma-so-thue-theo-tinh/ho-chi-minh-23",
 )
 max_pages = st.number_input(
     "Số lượng trang muốn quét:", min_value=1, max_value=50, value=4
@@ -61,26 +56,28 @@ if start_button and url_input:
     visited_links = set()
     status_text = st.empty()
 
-    # 1. Khởi tạo màn hình ảo (Virtual Display) cho Linux Server
+    # Khởi tạo Màn hình ảo
     display = Display(visible=0, size=(1920, 1080))
     display.start()
 
-    # 2. Khởi tạo Driver chống bị phát hiện (UC Mode)
-    driver = Driver(uc=True, headless=False)
+    # Khởi tạo Driver tối ưu tốc độ (Chặn tải ảnh, font, media để load trang siêu nhanh)
+    driver = Driver(
+        uc=True,
+        headless=False,
+        chromium_arg="--blink-settings=imagesEnabled=false --disable-remote-fonts --disable-speech-api",
+    )
 
     try:
         current_url = url_input
 
         for page_idx in range(1, max_pages + 1):
             status_text.text(
-                f"⏳ Đang tải trang {page_idx}/{max_pages}: {current_url}"
+                f"⚡ Đang tải nhanh trang {page_idx}/{max_pages}: {current_url}"
             )
 
-            # Mở trang bằng cơ chế bypass Cloudflare (UC GUI)
-            driver.uc_open_with_reconnect(current_url, reconnect_time=6)
-            time.sleep(3)
+            driver.uc_open_with_reconnect(current_url, reconnect_time=3)
+            time.sleep(1)  # Giảm thời gian chờ xuống 1s
 
-            # Lấy danh sách link từ vùng hiển thị chính
             page_source = driver.page_source
             soup = BeautifulSoup(page_source, "html.parser")
 
@@ -116,21 +113,20 @@ if start_button and url_input:
                 f" Tìm thấy {len(detail_links)} công ty ở trang {page_idx}."
             )
 
-            # Quét từng công ty
+            # Quét từng trang chi tiết
             for idx, link in enumerate(detail_links, 1):
                 status_text.text(
-                    f"⏳ Trang {page_idx}/{max_pages} - Đang cào [{idx}/{len(detail_links)}]: {link}"
+                    f"⚡ Trang {page_idx}/{max_pages} - Đang kiểm tra SĐT [{idx}/{len(detail_links)}]: {link}"
                 )
 
                 try:
-                    driver.uc_open_with_reconnect(link, reconnect_time=4)
-                    time.sleep(1.5)
+                    driver.uc_open_with_reconnect(link, reconnect_time=2)
+                    time.sleep(0.5)  # Giảm trễ giữa các lượt cào xuống 0.5s
 
                     detail_soup = BeautifulSoup(
                         driver.page_source, "html.parser"
                     )
 
-                    # Lọc SĐT trước
                     phone = extract_phone(detail_soup)
                     if phone == "Không có" or not phone:
                         continue
@@ -164,7 +160,6 @@ if start_button and url_input:
                 except Exception:
                     continue
 
-            # Phân trang
             current_url = (
                 f"{url_input}&page={page_idx + 1}"
                 if "?" in url_input
@@ -178,7 +173,7 @@ if start_button and url_input:
     status_text.text("✅ Hoàn tất quá trình cào dữ liệu!")
 
     if all_data:
-        st.success(f"🎉 Đã thu thập được {len(all_data)} công ty có SĐT!")
+        st.success(f"🎉 Đã thu thập xong {len(all_data)} công ty có SĐT!")
         df = pd.DataFrame(all_data)
         st.dataframe(df)
 
