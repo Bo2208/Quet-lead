@@ -7,28 +7,25 @@ from bs4 import BeautifulSoup
 from pyvirtualdisplay import Display
 from seleniumbase import Driver
 
-# Đặt đoạn này ngay sau st.set_page_config(...)
-hide_elements = """
+# Chèn đoạn này ngay sau st.set_page_config(...)
+hide_github_and_edit = """
     <style>
-    /* 1. Ẩn hoàn toàn thanh Header góc trên (chứa Share, Star, Edit, GitHub, Menu 3 chấm) */
-    header[data-testid="stHeader"], [data-testid="stHeader"] {
-        display: none !important;
-        visibility: hidden !important;
-        height: 0px !important;
-    }
-    
-    /* 2. Ẩn Footer mặc định của Streamlit (nếu có) */
-    footer {
+    /* 1. Ẩn nút GitHub (thẻ a dẫn đến github.com) */
+    a[href*="github.com"], 
+    [data-testid="stHeader"] a[href*="github"] {
         display: none !important;
     }
     
-    /* 3. Chỉnh lại khoảng cách đỉnh trang cho căn đối */
-    .main .block-container {
-        padding-top: 2rem !important;
+    /* 2. Ẩn nút Edit / Open in Studio (nằm ở vị trí icon cây bút) */
+    [data-testid="stHeader"] button[title*="Edit"],
+    [data-testid="stHeader"] button[title*="Studio"],
+    [data-testid="stHeader"] button[aria-label*="Edit"],
+    [data-testid="stHeader"] button[aria-label*="Studio"] {
+        display: none !important;
     }
     </style>
 """
-st.markdown(hide_elements, unsafe_allow_html=True)
+st.markdown(hide_github_and_edit, unsafe_allow_html=True)
 
 st.set_page_config(page_title="Tool Auto Scraper (Cloud Server)", page_icon="🔍")
 st.title("🔍 Tool Auto Scraper - Chạy On-Cloud Bypass Cloudflare")
