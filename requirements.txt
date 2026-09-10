@@ -3,4 +3,3 @@ pandas
 beautifulsoup4
 openpyxl
 playwright
-playwright-stealth
