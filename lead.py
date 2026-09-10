@@ -43,7 +43,7 @@ st.title("⚡ Tool Auto Scraper - Cào Dữ Liệu Siêu Tốc")
 
 url_input = st.text_input(
     "Dán URL cần cào:",
-    value="https://masothue.com/tra-cuu-ma-so-thue-theo-tinh/ho-chi-minh-23",
+    value="",
 )
 max_pages = st.number_input(
     "Số lượng trang muốn quét:", min_value=1, max_value=50, value=4
