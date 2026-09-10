@@ -1,5 +1,4 @@
 import io
-import os
 import re
 import subprocess
 import time
@@ -8,13 +7,13 @@ import streamlit as st
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-# --- 1. TỰ ĐỘNG TẢI CHROMIUM NẾU CHƯA CÓ TRÊN SERVER ---
+# 1. Tự động kiểm tra & cài đặt Chromium nếu server khởi động lại
 try:
     subprocess.run(["playwright", "install", "chromium"], check=True)
-except Exception as e:
+except Exception:
     pass
 
-# --- 2. ẨN HEADER CSS ---
+# 2. CSS ẩn nút GitHub & Edit
 hide_github_and_edit = """
     <style>
     a[href*="github"],
@@ -28,14 +27,19 @@ hide_github_and_edit = """
 """
 st.markdown(hide_github_and_edit, unsafe_allow_html=True)
 
-st.title("⚡ Tool Auto Scraper - Bypass Cloudflare")
+st.title("⚡ Tool Auto Scraper - Cào Dữ Liệu Tối Ưu")
 
 url_input = st.text_input(
     "Dán URL cần cào:",
-    value="",
+    value="https://masothue.com/tra-cuu-ma-so-thue-theo-tinh/ho-chi-minh-23",
 )
+
+# Giới hạn tối đa 10 trang trên Web để tránh 1 người làm nghẽn Server chung
 max_pages = st.number_input(
-    "Số lượng trang muốn quét:", min_value=1, max_value=50, value=4
+    "Số lượng trang muốn quét (Tối đa 10 trang/lượt trên Web):",
+    min_value=1,
+    max_value=10,
+    value=3,
 )
 start_button = st.button("🚀 Bắt đầu cào dữ liệu", type="primary")
 
@@ -61,131 +65,141 @@ if start_button and url_input:
     visited_links = set()
     status_text = st.empty()
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=True,
-            args=[
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-blink-features=AutomationControlled",
-            ],
-        )
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            viewport={"width": 1920, "height": 1080},
-        )
-        page = context.new_page()
+    # Quản lý tài nguyên bằng khối try...finally để đảm bảo luôn đóng trình duyệt khi xong/lỗi
+    try:
+        with sync_playwright() as p:
+            # BỘ CỜ TỐI ƯU RAM DÀNH CHO MULTI-USER TRÊN CLOUD
+            browser = p.chromium.launch(
+                headless=True,
+                args=[
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",  # Chống tràn bộ nhớ shared memory trên Linux
+                    "--single-process",  # Ép Chromium chạy 1 tiến trình để tiết kiệm RAM tối đa
+                    "--no-zygote",
+                    "--disable-gpu",
+                    "--disable-blink-features=AutomationControlled",
+                ],
+            )
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                viewport={"width": 1280, "height": 720},
+            )
+            page = context.new_page()
 
-        page.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined
-            });
-        """)
-
-        current_url = url_input
-
-        for page_idx in range(1, max_pages + 1):
-            status_text.text(
-                f"⏳ Đang tải trang {page_idx}/{max_pages}: {current_url}"
+            # Chặn tải hình ảnh & css để tăng tốc độ cào và tiết kiệm dung lượng RAM
+            page.route(
+                "**/*.{png,jpg,jpeg,svg,css,woff,woff2}", lambda route: route.abort()
             )
 
-            try:
-                page.goto(
-                    current_url, wait_until="domcontentloaded", timeout=60000
-                )
-                time.sleep(2)
-            except Exception as e:
-                st.error(f"Lỗi tải trang {page_idx}: {e}")
-                break
+            current_url = url_input
 
-            soup = BeautifulSoup(page.content(), "html.parser")
-
-            detail_links = []
-            anchors = soup.select(
-                "div.tax-listing h3 a, div.table-tax-listing h3 a"
-            )
-            if not anchors:
-                anchors = soup.select("main a[href]")
-
-            for a_tag in anchors:
-                href = a_tag.get("href", "")
-                full_url = (
-                    f"https://masothue.com{href}"
-                    if href.startswith("/")
-                    else href
-                )
-                if (
-                    "masothue.com/" in full_url
-                    and re.search(r"/\d{9,13}", full_url)
-                    and full_url not in visited_links
-                ):
-                    detail_links.append(full_url)
-                    visited_links.add(full_url)
-
-            if not detail_links:
-                st.info(
-                    f"Không tìm thấy danh sách doanh nghiệp ở trang {page_idx}."
-                )
-                break
-
-            st.write(
-                f" Tìm thấy {len(detail_links)} công ty ở trang {page_idx}."
-            )
-
-            for idx, link in enumerate(detail_links, 1):
+            for page_idx in range(1, max_pages + 1):
                 status_text.text(
-                    f"⚡ Trang {page_idx}/{max_pages} - Đang kiểm tra SĐT [{idx}/{len(detail_links)}]: {link}"
+                    f"⏳ Đang tải trang {page_idx}/{max_pages}: {current_url}"
                 )
 
                 try:
                     page.goto(
-                        link, wait_until="domcontentloaded", timeout=60000
+                        current_url, wait_until="domcontentloaded", timeout=40000
                     )
-                    time.sleep(1)
+                    time.sleep(1.5)
+                except Exception as e:
+                    st.error(f"Không thể tải trang {page_idx} hoặc bị chặn IP.")
+                    break
 
-                    detail_soup = BeautifulSoup(page.content(), "html.parser")
+                soup = BeautifulSoup(page.content(), "html.parser")
 
-                    phone = extract_phone(detail_soup)
-                    if phone == "Không có" or not phone:
+                detail_links = []
+                anchors = soup.select(
+                    "div.tax-listing h3 a, div.table-tax-listing h3 a"
+                )
+                if not anchors:
+                    anchors = soup.select("main a[href]")
+
+                for a_tag in anchors:
+                    href = a_tag.get("href", "")
+                    full_url = (
+                        f"https://masothue.com{href}"
+                        if href.startswith("/")
+                        else href
+                    )
+                    if (
+                        "masothue.com/" in full_url
+                        and re.search(r"/\d{9,13}", full_url)
+                        and full_url not in visited_links
+                    ):
+                        detail_links.append(full_url)
+                        visited_links.add(full_url)
+
+                if not detail_links:
+                    st.info(
+                        f"Không tìm thấy danh sách doanh nghiệp ở trang {page_idx}."
+                    )
+                    break
+
+                st.write(
+                    f" Tìm thấy {len(detail_links)} công ty ở trang {page_idx}."
+                )
+
+                for idx, link in enumerate(detail_links, 1):
+                    status_text.text(
+                        f"⚡ Trang {page_idx}/{max_pages} - Đang kiểm tra SĐT [{idx}/{len(detail_links)}]: {link}"
+                    )
+
+                    try:
+                        page.goto(
+                            link, wait_until="domcontentloaded", timeout=30000
+                        )
+                        time.sleep(0.8)
+
+                        detail_soup = BeautifulSoup(page.content(), "html.parser")
+
+                        phone = extract_phone(detail_soup)
+                        if phone == "Không có" or not phone:
+                            continue
+
+                        title = detail_soup.find("h1")
+                        company_name = (
+                            clean_text(title.get_text()) if title else "N/A"
+                        )
+
+                        tax_code, address, representative = "N/A", "N/A", "N/A"
+                        for row in detail_soup.find_all("tr"):
+                            text = row.get_text()
+                            cols = row.find_all("td")
+                            if "Mã số thuế" in text and cols:
+                                tax_code = clean_text(cols[-1].get_text())
+                            elif "Địa chỉ" in text and cols:
+                                address = clean_text(cols[-1].get_text())
+                            elif "Người đại diện" in text and cols:
+                                representative = clean_text(cols[-1].get_text())
+
+                        all_data.append(
+                            {
+                                "Tên Công Ty": company_name,
+                                "Mã Số Thuế": tax_code,
+                                "Số Điện Thoại": phone,
+                                "Người Đại Diện": representative,
+                                "Địa Chỉ": address,
+                                "Link Chi Tiết": link,
+                            }
+                        )
+                    except Exception:
                         continue
 
-                    title = detail_soup.find("h1")
-                    company_name = (
-                        clean_text(title.get_text()) if title else "N/A"
-                    )
+                current_url = (
+                    f"{url_input}&page={page_idx + 1}"
+                    if "?" in url_input
+                    else f"{url_input}?page={page_idx + 1}"
+                )
 
-                    tax_code, address, representative = "N/A", "N/A", "N/A"
-                    for row in detail_soup.find_all("tr"):
-                        text = row.get_text()
-                        cols = row.find_all("td")
-                        if "Mã số thuế" in text and cols:
-                            tax_code = clean_text(cols[-1].get_text())
-                        elif "Địa chỉ" in text and cols:
-                            address = clean_text(cols[-1].get_text())
-                        elif "Người đại diện" in text and cols:
-                            representative = clean_text(cols[-1].get_text())
+            # Đóng tài nguyên sau khi cào xong
+            context.close()
+            browser.close()
 
-                    all_data.append(
-                        {
-                            "Tên Công Ty": company_name,
-                            "Mã Số Thuế": tax_code,
-                            "Số Điện Thoại": phone,
-                            "Người Đại Diện": representative,
-                            "Địa Chỉ": address,
-                            "Link Chi Tiết": link,
-                        }
-                    )
-                except Exception:
-                    continue
-
-            current_url = (
-                f"{url_input}&page={page_idx + 1}"
-                if "?" in url_input
-                else f"{url_input}?page={page_idx + 1}"
-            )
-
-        browser.close()
+    except Exception as err:
+        st.error("Hệ thống đang bận do nhiều lượt truy cập, vui lòng thử lại sau ít phút!")
 
     status_text.text("✅ Hoàn tất quá trình cào dữ liệu!")
 
