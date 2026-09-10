@@ -31,7 +31,7 @@ st.title("⚡ Tool Auto Scraper - Cào Dữ Liệu Tối Ưu")
 
 url_input = st.text_input(
     "Dán URL cần cào:",
-    value="https://masothue.com/tra-cuu-ma-so-thue-theo-tinh/ho-chi-minh-23",
+    value="",
 )
 
 # Giới hạn tối đa 10 trang trên Web để tránh 1 người làm nghẽn Server chung
