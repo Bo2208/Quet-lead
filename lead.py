@@ -7,6 +7,20 @@ from bs4 import BeautifulSoup
 from pyvirtualdisplay import Display
 from seleniumbase import Driver
 
+hide_specific_icons = """
+    <style>
+    /* Ẩn icon GitHub */
+    a[href*="github.com"] {display: none !important;}
+    
+    /* Ẩn icon Cây bút (Edit) */
+    button[title*="Edit"], button[title*="Studio"] {display: none !important;}
+    
+    /* Ẩn icon Ngôi sao (Favorite) */
+    button[title*="Favorite"], button[title*="star"] {display: none !important;}
+    </style>
+"""
+st.markdown(hide_specific_icons, unsafe_allow_html=True)
+
 st.set_page_config(page_title="Tool Auto Scraper (Cloud Server)", page_icon="🔍")
 st.title("🔍 Tool Auto Scraper - Chạy On-Cloud Bypass Cloudflare")
 
