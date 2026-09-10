@@ -5,15 +5,16 @@ import pandas as pd
 import streamlit as st
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
-from playwright_stealth import stealth_sync
 
-# --- ẨN HEADER CSS ---
+# --- ẨN CSS HEADER STREAMLIT ---
 hide_github_and_edit = """
     <style>
+    /* Ẩn nút GitHub & nút Edit trên các phiên bản Streamlit */
     a[href*="github"],
-    div[data-testid="stHeaderActionElements"] > a,
+    [data-testid="stHeaderActionElements"] > a,
     button[title*="Edit"],
-    button[title*="Studio"] {
+    button[title*="Studio"],
+    button[aria-label*="Edit"] {
         display: none !important;
     }
     </style>
@@ -54,22 +55,28 @@ if start_button and url_input:
     status_text = st.empty()
 
     with sync_playwright() as p:
-        # Khởi tạo Chromium dạng Headless tương thích Cloud
+        # Khởi tạo Chromium với các cờ bypass tự động
         browser = p.chromium.launch(
             headless=True,
             args=[
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-blink-features=AutomationControlled",
+                "--disable-infobars",
             ],
         )
         context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            viewport={"width": 1920, "height": 1080},
         )
         page = context.new_page()
 
-        # Áp dụng Stealth để tránh bị phát hiện là Bot
-        stealth_sync(page)
+        # Giả lập webdriver navigator bằng script trực tiếp thay vì thư viện ngoài bị hỏng
+        page.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            });
+        """)
 
         current_url = url_input
 
