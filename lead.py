@@ -12,21 +12,28 @@ st.set_page_config(page_title="Tool Auto Scraper - Super Fast", page_icon="⚡")
 # Chèn đoạn này ngay sau st.set_page_config(...)
 hide_github_and_edit = """
     <style>
-    /* 1. Ẩn nút GitHub & nút Edit trong cấu trúc Header mới */
-    [data-testid="stHeaderActionElements"] a,
-    [data-testid="stHeaderActionElements"] button:not([aria-label*="Overflow"]):not([title*="Overflow"]),
-    .stAppHeader a[href*="github"],
-    .stAppHeader button[title*="Edit"],
-    .stAppHeader button[title*="Studio"],
-    .stAppHeader button[aria-label*="Edit"] {
+    /* 1. Triệt hạ nút GitHub triệt để bằng mọi thuộc tính liên quan */
+    a[href*="github"],
+    a[href*="github.com"],
+    [data-testid="stHeader"] a[href*="github"],
+    [data-testid="stAppHeader"] a[href*="github"],
+    div[data-testid="stHeaderActionElements"] > a,
+    div[data-testid="stToolbar"] a[href*="github"] {
         display: none !important;
+        visibility: hidden !important;
+        width: 0px !important;
+        height: 0px !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
-    
-    /* 2. Ẩn biểu tượng GitHub/Edit theo thuộc tính href và aria-label */
-    a[href*="github.com"], 
-    button[aria-label*="Edit with Streamlit"],
-    button[title*="Edit this app"] {
+
+    /* 2. Ẩn nút Edit (Cây bút) */
+    button[title*="Edit"],
+    button[title*="Studio"],
+    button[aria-label*="Edit"],
+    [data-testid="stHeader"] button[title*="Edit"] {
         display: none !important;
+        visibility: hidden !important;
     }
     </style>
 """
