@@ -9,14 +9,23 @@ from seleniumbase import Driver
 
 st.set_page_config(page_title="Tool Auto Scraper - Super Fast", page_icon="⚡")
 
-# --- CSS TÙY CHỈNH GIAO DIỆN ---
+# Chèn đoạn này ngay sau st.set_page_config(...)
 hide_github_and_edit = """
     <style>
-    /* Ẩn nút GitHub & Nút Edit */
+    /* 1. Ẩn nút GitHub & nút Edit trong cấu trúc Header mới */
+    [data-testid="stHeaderActionElements"] a,
+    [data-testid="stHeaderActionElements"] button:not([aria-label*="Overflow"]):not([title*="Overflow"]),
+    .stAppHeader a[href*="github"],
+    .stAppHeader button[title*="Edit"],
+    .stAppHeader button[title*="Studio"],
+    .stAppHeader button[aria-label*="Edit"] {
+        display: none !important;
+    }
+    
+    /* 2. Ẩn biểu tượng GitHub/Edit theo thuộc tính href và aria-label */
     a[href*="github.com"], 
-    [data-testid="stHeader"] button[title*="Edit"],
-    [data-testid="stHeader"] button[title*="Studio"],
-    [data-testid="stHeader"] button[aria-label*="Edit"] {
+    button[aria-label*="Edit with Streamlit"],
+    button[title*="Edit this app"] {
         display: none !important;
     }
     </style>
