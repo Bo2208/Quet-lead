@@ -1,15 +1,22 @@
 import io
+import os
 import re
+import subprocess
 import time
 import pandas as pd
 import streamlit as st
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-# --- ẨN CSS HEADER STREAMLIT ---
+# --- 1. TỰ ĐỘNG TẢI CHROMIUM NẾU CHƯA CÓ TRÊN SERVER ---
+try:
+    subprocess.run(["playwright", "install", "chromium"], check=True)
+except Exception as e:
+    pass
+
+# --- 2. ẨN HEADER CSS ---
 hide_github_and_edit = """
     <style>
-    /* Ẩn nút GitHub & nút Edit trên các phiên bản Streamlit */
     a[href*="github"],
     [data-testid="stHeaderActionElements"] > a,
     button[title*="Edit"],
@@ -25,7 +32,7 @@ st.title("⚡ Tool Auto Scraper - Bypass Cloudflare")
 
 url_input = st.text_input(
     "Dán URL cần cào:",
-    value="",
+    value="https://masothue.com/tra-cuu-ma-so-thue-theo-tinh/ho-chi-minh-23",
 )
 max_pages = st.number_input(
     "Số lượng trang muốn quét:", min_value=1, max_value=50, value=4
@@ -55,14 +62,13 @@ if start_button and url_input:
     status_text = st.empty()
 
     with sync_playwright() as p:
-        # Khởi tạo Chromium với các cờ bypass tự động
         browser = p.chromium.launch(
             headless=True,
             args=[
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
                 "--disable-blink-features=AutomationControlled",
-                "--disable-infobars",
             ],
         )
         context = browser.new_context(
@@ -71,7 +77,6 @@ if start_button and url_input:
         )
         page = context.new_page()
 
-        # Giả lập webdriver navigator bằng script trực tiếp thay vì thư viện ngoài bị hỏng
         page.add_init_script("""
             Object.defineProperty(navigator, 'webdriver', {
                 get: () => undefined
