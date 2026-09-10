@@ -7,19 +7,28 @@ from bs4 import BeautifulSoup
 from pyvirtualdisplay import Display
 from seleniumbase import Driver
 
-hide_specific_icons = """
+# Đặt đoạn này ngay sau st.set_page_config(...)
+hide_elements = """
     <style>
-    /* Ẩn icon GitHub */
-    a[href*="github.com"] {display: none !important;}
+    /* 1. Ẩn hoàn toàn thanh Header góc trên (chứa Share, Star, Edit, GitHub, Menu 3 chấm) */
+    header[data-testid="stHeader"], [data-testid="stHeader"] {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0px !important;
+    }
     
-    /* Ẩn icon Cây bút (Edit) */
-    button[title*="Edit"], button[title*="Studio"] {display: none !important;}
+    /* 2. Ẩn Footer mặc định của Streamlit (nếu có) */
+    footer {
+        display: none !important;
+    }
     
-    /* Ẩn icon Ngôi sao (Favorite) */
-    button[title*="Favorite"], button[title*="star"] {display: none !important;}
+    /* 3. Chỉnh lại khoảng cách đỉnh trang cho căn đối */
+    .main .block-container {
+        padding-top: 2rem !important;
+    }
     </style>
 """
-st.markdown(hide_specific_icons, unsafe_allow_html=True)
+st.markdown(hide_elements, unsafe_allow_html=True)
 
 st.set_page_config(page_title="Tool Auto Scraper (Cloud Server)", page_icon="🔍")
 st.title("🔍 Tool Auto Scraper - Chạy On-Cloud Bypass Cloudflare")
