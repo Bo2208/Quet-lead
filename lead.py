@@ -164,7 +164,7 @@ max_pages = st.number_input(
     "Số lượng trang muốn quét (Tối đa 10 trang/lượt):",
     min_value=1,
     max_value=10,
-    value="",
+    value=1,
 )
 start_button = st.button("🚀 Bắt đầu cào Data ngay", type="primary")
 
