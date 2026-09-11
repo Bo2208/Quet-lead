@@ -1,4 +1,5 @@
 import io
+import random
 import re
 import subprocess
 import time
@@ -7,13 +8,13 @@ import streamlit as st
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-# 1. Tự động kiểm tra & cài đặt Chromium nếu server khởi động lại
+# 1. Tự động kiểm tra Chromium trên Server
 try:
     subprocess.run(["playwright", "install", "chromium"], check=True)
 except Exception:
     pass
 
-# 2. CSS ẩn nút GitHub & Edit
+# 2. CSS ẩn nút Header Streamlit
 hide_github_and_edit = """
     <style>
     a[href*="github"],
@@ -27,19 +28,18 @@ hide_github_and_edit = """
 """
 st.markdown(hide_github_and_edit, unsafe_allow_html=True)
 
-st.title("⚡ Tool Auto Scraper - Cào Dữ Liệu Tối Ưu")
+st.title("⚡ Tool Auto Scraper - Vượt Bảo Mật Cloudflare")
 
 url_input = st.text_input(
     "Dán URL cần cào:",
-    value="",
+    value="https://masothue.com/tra-cuu-ma-so-thue-theo-tinh/ho-chi-minh-23",
 )
 
-# Giới hạn tối đa 10 trang trên Web để tránh 1 người làm nghẽn Server chung
 max_pages = st.number_input(
-    "Số lượng trang muốn quét (Tối đa 10 trang/lượt trên Web):",
+    "Số lượng trang muốn quét (Tối đa 10 trang/lượt):",
     min_value=1,
     max_value=10,
-    value=3,
+    value=4,
 )
 start_button = st.button("🚀 Bắt đầu cào dữ liệu", type="primary")
 
@@ -65,31 +65,31 @@ if start_button and url_input:
     visited_links = set()
     status_text = st.empty()
 
-    # Quản lý tài nguyên bằng khối try...finally để đảm bảo luôn đóng trình duyệt khi xong/lỗi
     try:
         with sync_playwright() as p:
-            # BỘ CỜ TỐI ƯU RAM DÀNH CHO MULTI-USER TRÊN CLOUD
             browser = p.chromium.launch(
                 headless=True,
                 args=[
                     "--no-sandbox",
                     "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage",  # Chống tràn bộ nhớ shared memory trên Linux
-                    "--single-process",  # Ép Chromium chạy 1 tiến trình để tiết kiệm RAM tối đa
-                    "--no-zygote",
-                    "--disable-gpu",
+                    "--disable-dev-shm-usage",
                     "--disable-blink-features=AutomationControlled",
                 ],
             )
+            
+            # Khởi tạo Context với User-Agent chuẩn desktop
             context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-                viewport={"width": 1280, "height": 720},
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                viewport={"width": 1920, "height": 1080},
+                extra_http_headers={
+                    "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+                }
             )
             page = context.new_page()
 
-            # Chặn tải hình ảnh & css để tăng tốc độ cào và tiết kiệm dung lượng RAM
+            # Chặn tải các tài nguyên nặng không cần thiết (hình ảnh, media, font)
             page.route(
-                "**/*.{png,jpg,jpeg,svg,css,woff,woff2}", lambda route: route.abort()
+                "**/*.{png,jpg,jpeg,svg,woff,woff2,mp4}", lambda route: route.abort()
             )
 
             current_url = url_input
@@ -100,12 +100,21 @@ if start_button and url_input:
                 )
 
                 try:
+                    # Chuyển trang kèm wait_until="networkidle" để đợi Cloudflare giải xong challenge
                     page.goto(
-                        current_url, wait_until="domcontentloaded", timeout=40000
+                        current_url, wait_until="networkidle", timeout=45000
                     )
-                    time.sleep(1.5)
+                    time.sleep(2)  # Trễ cố định 2s cho trang chính
+
+                    # KIỂM TRA BẢO MẬT CLOUDFLARE
+                    page_content = page.content()
+                    if "Just a moment..." in page.title() or "cf-mitigation" in page_content:
+                        status_text.text(f"🛡️ Phát hiện Cloudflare ở trang {page_idx}, đang tự động chờ xác minh...")
+                        time.sleep(6)  # Đợi Cloudflare tự vượt qua challenge
+                        page_content = page.content()
+
                 except Exception as e:
-                    st.error(f"Không thể tải trang {page_idx} hoặc bị chặn IP.")
+                    st.error(f"Không thể mở trang {page_idx} (Có thể bị ngắt kết nối do bảo mật).")
                     break
 
                 soup = BeautifulSoup(page.content(), "html.parser")
@@ -133,8 +142,8 @@ if start_button and url_input:
                         visited_links.add(full_url)
 
                 if not detail_links:
-                    st.info(
-                        f"Không tìm thấy danh sách doanh nghiệp ở trang {page_idx}."
+                    st.warning(
+                        f"Trang {page_idx} không lấy được danh sách công ty (Có thể đã dính captcha xác minh)."
                     )
                     break
 
@@ -144,14 +153,16 @@ if start_button and url_input:
 
                 for idx, link in enumerate(detail_links, 1):
                     status_text.text(
-                        f"⚡ Trang {page_idx}/{max_pages} - Đang kiểm tra SĐT [{idx}/{len(detail_links)}]: {link}"
+                        f"⚡ Trang {page_idx}/{max_pages} - Đang cào dữ liệu [{idx}/{len(detail_links)}]: {link}"
                     )
 
                     try:
                         page.goto(
                             link, wait_until="domcontentloaded", timeout=30000
                         )
-                        time.sleep(0.8)
+                        
+                        # Giảm tần suất bị chặn bằng khoảng trễ ngẫu nhiên (1s - 2s)
+                        time.sleep(random.uniform(1.0, 2.0))
 
                         detail_soup = BeautifulSoup(page.content(), "html.parser")
 
@@ -194,12 +205,11 @@ if start_button and url_input:
                     else f"{url_input}?page={page_idx + 1}"
                 )
 
-            # Đóng tài nguyên sau khi cào xong
             context.close()
             browser.close()
 
     except Exception as err:
-        st.error("Hệ thống đang bận do nhiều lượt truy cập, vui lòng thử lại sau ít phút!")
+        st.error("Hệ thống gián đoạn do Cloudflare chặn IP tạm thời. Vui lòng thử lại sau 2 - 3 phút!")
 
     status_text.text("✅ Hoàn tất quá trình cào dữ liệu!")
 
