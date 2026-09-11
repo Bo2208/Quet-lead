@@ -28,11 +28,11 @@ hide_github_and_edit = """
 """
 st.markdown(hide_github_and_edit, unsafe_allow_html=True)
 
-st.title("⚡ Tool Auto Scraper - Lấy Dữ Liệu Kèm Trạng Thái")
+st.title("⚡ Tool Auto Scraper - Cào Công Ty & Hộ Kinh Doanh")
 
 url_input = st.text_input(
     "Dán URL cần cào:",
-    value="",
+    value="https://masothue.com/tra-cuu-ma-so-thue-theo-tinh/ho-chi-minh-23",
 )
 
 max_pages = st.number_input(
@@ -121,8 +121,9 @@ if start_button and url_input:
                 soup = BeautifulSoup(page.content(), "html.parser")
 
                 detail_links = []
+                # Mở rộng selector để bao quát toàn bộ liên kết (Công ty, Hộ kinh doanh, Chi nhánh,...)
                 anchors = soup.select(
-                    "div.tax-listing h3 a, div.table-tax-listing h3 a"
+                    "div.tax-listing h3 a, div.table-tax-listing h3 a, table.table-taxinfo h3 a"
                 )
                 if not anchors:
                     anchors = soup.select("main a[href]")
@@ -134,6 +135,7 @@ if start_button and url_input:
                         if href.startswith("/")
                         else href
                     )
+                    # Nhận diện đường dẫn chi tiết mã số thuế (10 chữ số công ty hoặc 13 chữ số hộ kinh doanh/chi nhánh)
                     if (
                         "masothue.com/" in full_url
                         and re.search(r"/\d{9,13}", full_url)
@@ -144,12 +146,12 @@ if start_button and url_input:
 
                 if not detail_links:
                     st.warning(
-                        f"Trang {page_idx} không lấy được danh sách công ty."
+                        f"Trang {page_idx} không tìm thấy đối tượng nào."
                     )
                     break
 
                 st.write(
-                    f" Tìm thấy {len(detail_links)} công ty ở trang {page_idx}."
+                    f" Tìm thấy {len(detail_links)} đối tượng (Công ty / Hộ kinh doanh) ở trang {page_idx}."
                 )
 
                 for idx, link in enumerate(detail_links, 1):
@@ -173,11 +175,11 @@ if start_button and url_input:
                             continue
 
                         title = detail_soup.find("h1")
-                        company_name = (
+                        entity_name = (
                             clean_text(title.get_text()) if title else "N/A"
                         )
 
-                        tax_code, address, representative, company_status = (
+                        tax_code, address, representative, entity_status = (
                             "N/A",
                             "N/A",
                             "N/A",
@@ -186,11 +188,21 @@ if start_button and url_input:
                         for row in detail_soup.find_all("tr"):
                             text = row.get_text()
                             cols = row.find_all("td")
-                            if "Mã số thuế" in text and cols:
+                            if ("Mã số thuế" in text or "Mã số" in text) and cols:
                                 tax_code = clean_text(cols[-1].get_text())
                             elif "Địa chỉ" in text and cols:
                                 address = clean_text(cols[-1].get_text())
-                            elif "Người đại diện" in text and cols:
+                            elif (
+                                any(
+                                    k in text
+                                    for k in [
+                                        "Người đại diện",
+                                        "Chủ hộ",
+                                        "Đại diện pháp luật",
+                                    ]
+                                )
+                                and cols
+                            ):
                                 representative = clean_text(cols[-1].get_text())
                             elif (
                                 any(
@@ -199,15 +211,15 @@ if start_button and url_input:
                                 )
                                 and cols
                             ):
-                                company_status = clean_text(cols[-1].get_text())
+                                entity_status = clean_text(cols[-1].get_text())
 
                         all_data.append(
                             {
-                                "Tên Công Ty": company_name,
+                                "Tên Đơn Vị": entity_name,
                                 "Mã Số Thuế": tax_code,
                                 "Số Điện Thoại": phone,
-                                "Trạng Thái": company_status,
-                                "Người Đại Diện": representative,
+                                "Trạng Thái": entity_status,
+                                "Người Đại Diện / Chủ Hộ": representative,
                                 "Địa Chỉ": address,
                                 "Link Chi Tiết": link,
                             }
@@ -230,7 +242,9 @@ if start_button and url_input:
     status_text.text("✅ Hoàn tất quá trình cào dữ liệu!")
 
     if all_data:
-        st.success(f"🎉 Đã thu thập được {len(all_data)} công ty có SĐT!")
+        st.success(
+            f"🎉 Đã thu thập được {len(all_data)} đơn vị (Công ty/Hộ kinh doanh) có SĐT!"
+        )
         df = pd.DataFrame(all_data)
         st.dataframe(df)
 
@@ -241,6 +255,6 @@ if start_button and url_input:
         st.download_button(
             label="📥 Tải file Excel",
             data=buffer.getvalue(),
-            file_name="danh_sach_doanh_nghiep.xlsx",
+            file_name="danh_sach_don_vi.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
