@@ -157,14 +157,14 @@ st.caption("✨ Giao diện Trung Thu chuyên nghiệp - Cào Data siêu tốc &
 
 url_input = st.text_input(
     "Dán URL cần cào:",
-    value="https://masothue.com/tra-cuu-ma-so-thue-theo-tinh/ho-chi-minh-23",
+    value="",
 )
 
 max_pages = st.number_input(
     "Số lượng trang muốn quét (Tối đa 10 trang/lượt):",
     min_value=1,
     max_value=10,
-    value=4,
+    value="",
 )
 start_button = st.button("🚀 Bắt đầu cào Data ngay", type="primary")
 
