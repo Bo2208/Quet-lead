@@ -32,7 +32,7 @@ st.title("⚡ Tool Auto Scraper - Chuẩn SĐT Doanh Nghiệp")
 
 url_input = st.text_input(
     "Dán URL cần cào:",
-    value="https://masothue.com/tra-cuu-ma-so-thue-theo-tinh/ho-chi-minh-23",
+    value="",
 )
 
 max_pages = st.number_input(
