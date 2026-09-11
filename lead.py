@@ -14,39 +14,37 @@ try:
 except Exception:
     pass
 
-# 2. CẤU HÌNH TRANG & CSS MẶT TRĂNG CHI TIẾT SẮC NÉT
+# 2. CẤU HÌNH TRANG & CSS KHẮC PHỤC MÀU CHỮ Ô INPUT
 st.set_page_config(
     page_title="Tool Scraper - Lễ Hội Trung Thu",
     page_icon="🌕",
     layout="wide",
 )
 
-mid_autumn_pro_css = """
+mid_autumn_contrast_css = """
     <style>
-    /* 1. NỀN ĐÊM CHUYÊN NGHIỆP */
+    /* 1. NỀN TỔNG THỂ ĐÊM TRUNG THU */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
         background: linear-gradient(180deg, #090e17 0%, #0f1c2e 60%, #16273e 100%) !important;
         position: relative;
         overflow-x: hidden;
     }
     
-    /* 2. MẶT TRĂNG REALISTIC VỚI VẾT THIÊN THẠCH & QUẦNG SÁNG MỀM */
+    /* 2. MẶT TRĂNG REALISTIC GÓC TRÊN BÊN PHẢI */
     [data-testid="stAppViewContainer"]::before {
         content: "";
         position: fixed;
-        top: 70px;
+        top: 25px;
         right: 45px;
-        width: 150px;
-        height: 150px;
+        width: 90px;
+        height: 90px;
         border-radius: 50%;
         background-color: #f6e58d;
-        /* Tạo vân/vết thiên thạch tự nhiên trên mặt trăng bằng Radial Gradients */
         background-image: 
             radial-gradient(circle at 30% 30%, rgba(220, 190, 100, 0.4) 12%, transparent 13%),
             radial-gradient(circle at 65% 45%, rgba(210, 180, 90, 0.35) 18%, transparent 19%),
             radial-gradient(circle at 45% 70%, rgba(220, 190, 100, 0.3) 10%, transparent 11%),
             radial-gradient(circle at 75% 75%, rgba(200, 170, 80, 0.25) 8%, transparent 9%);
-        /* Phủ bóng 3D & quầng tỏa sáng mịn màng */
         box-shadow: 
             inset -10px -8px 15px rgba(180, 140, 40, 0.5),
             0 0 25px rgba(246, 229, 141, 0.6),
@@ -55,7 +53,7 @@ mid_autumn_pro_css = """
         pointer-events: none;
     }
 
-    /* 3. DẢI ĐÈN LỒNG TRUNG THU ĐUNG ĐƯA GÓC TRÁI */
+    /* 3. DẢI ĐÈN LỒNG GÓC TRÁI */
     .lantern-group {
         position: fixed;
         top: 20px;
@@ -72,7 +70,7 @@ mid_autumn_pro_css = """
         100% { transform: rotate(4deg); }
     }
 
-    /* 4. KHUNG GIAO DIỆN CHÍNH BO GÓC SẮC NÉT */
+    /* 4. KHUNG GIAO DIỆN CHÍNH */
     [data-testid="stMainBlockContainer"] {
         background-color: rgba(15, 28, 46, 0.88) !important;
         border: 1px solid rgba(246, 229, 141, 0.35) !important;
@@ -83,7 +81,7 @@ mid_autumn_pro_css = """
         margin-top: 20px !important;
     }
 
-    /* 5. TỐI ƯU MÀU CHỮ NỔI BẬT */
+    /* 5. TỐI ƯU MÀU NHÃN CHỮ NỔI BẬT */
     h1, h2, h3, h4, h5, h6, p, label, span, div, .stMarkdown, [data-testid="stWidgetLabel"] {
         color: #ffffff !important;
         font-weight: 600 !important;
@@ -97,28 +95,32 @@ mid_autumn_pro_css = """
         text-shadow: 0 0 10px rgba(246, 229, 141, 0.4) !important;
     }
 
-    /* Ô NHẬP LIỆU CHỮ RÕ NÉT */
-    div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="spinbutton"] {
-        background-color: rgba(6, 12, 20, 0.95) !important;
-        border: 1.5px solid rgba(246, 229, 141, 0.6) !important;
+    /* 6. FIX FIX FIX: TỐI TỐI KHUNG INPUT & ĐỔI CHỮ TRẮNG TINH NÉT CĂNG */
+    div[data-baseweb="input"], 
+    div[data-baseweb="base-input"], 
+    div[data-baseweb="spinbutton"],
+    [data-testid="stTextInput"] input,
+    [data-testid="stNumberInput"] input {
+        background-color: #060d17 !important; /* Nền tối hẳn */
+        color: #ffffff !important;             /* Chữ trắng tinh */
         border-radius: 8px !important;
-    }
-
-    input {
-        color: #f6e58d !important;
-        background-color: transparent !important;
-        font-size: 0.95rem !important;
+        font-size: 1rem !important;
         font-weight: bold !important;
+        -webkit-text-fill-color: #ffffff !important; /* Ép màu chữ rõ trên mọi trình duyệt */
     }
 
-    /* BẢNG BẢNG DỮ LIỆU DATAFRAME */
+    div[data-baseweb="input"] {
+        border: 2px solid #f6e58d !important; /* Viền vàng trăng rực rỡ */
+    }
+
+    /* 7. BẢNG DỮ LIỆU DATAFRAME */
     [data-testid="stDataFrame"], div[role="grid"] {
-        background-color: rgba(6, 12, 20, 0.95) !important;
+        background-color: #060d17 !important;
         border: 1px solid rgba(246, 229, 141, 0.4) !important;
         border-radius: 8px !important;
     }
 
-    /* NÚT BẤM ĐÈN LỒNG NỔI BẬT */
+    /* 8. NÚT BẤM ĐÈN LỒNG NỔI BẬT */
     div.stButton > button {
         background: linear-gradient(90deg, #e63946 0%, #ff4d6d 100%) !important;
         color: #ffffff !important;
@@ -134,7 +136,7 @@ mid_autumn_pro_css = """
         box-shadow: 0 6px 20px rgba(246, 229, 141, 0.7) !important;
     }
 
-    /* Ẩn nút thừa Streamlit */
+    /* Ẩn bớt nút thừa Streamlit */
     a[href*="github"],
     [data-testid="stHeaderActionElements"] > a,
     button[title*="Edit"],
@@ -144,7 +146,7 @@ mid_autumn_pro_css = """
     }
     </style>
 """
-st.markdown(mid_autumn_pro_css, unsafe_allow_html=True)
+st.markdown(mid_autumn_contrast_css, unsafe_allow_html=True)
 
 # Đèn lồng trang trí
 st.markdown('<div class="lantern-group">🏮🏮🏮</div>', unsafe_allow_html=True)
@@ -155,7 +157,7 @@ st.caption("✨ Giao diện Trung Thu chuyên nghiệp - Cào Data siêu tốc &
 
 url_input = st.text_input(
     "Dán URL cần cào:",
-    value="",
+    value="https://masothue.com/tra-cuu-ma-so-thue-theo-tinh/ho-chi-minh-23",
 )
 
 max_pages = st.number_input(
