@@ -28,7 +28,7 @@ hide_github_and_edit = """
 """
 st.markdown(hide_github_and_edit, unsafe_allow_html=True)
 
-st.title("⚡ Tool Auto Scraper - Cào Công Ty & Hộ Kinh Doanh")
+st.title("⚡ Tool Auto Scraper - Chuẩn SĐT Doanh Nghiệp")
 
 url_input = st.text_input(
     "Dán URL cần cào:",
@@ -48,15 +48,33 @@ def clean_text(text):
     return re.sub(r"\s+", " ", text).strip() if text else "N/A"
 
 
-def extract_phone(soup):
-    for row in soup.find_all(["tr", "li", "div"]):
+def extract_phone_accurate(soup):
+    """
+    Chỉ tìm SĐT trong bảng thông tin chi tiết của doanh nghiệp.
+    Loại bỏ SĐT hotline hệ thống/footer trùng lặp.
+    """
+    # Số hotline/hỗ trợ của trang cần loại bỏ
+    system_hotlines = ["0169764112", "039764112", "0901234567"]
+    
+    # 1. Tìm ưu tiên trong bảng thông tin chi tiết (table-taxinfo)
+    main_table = soup.select_one("table.table-taxinfo, div.tax-listing")
+    target_area = main_table if main_table else soup
+
+    for row in target_area.find_all("tr"):
         row_text = row.get_text()
-        if any(k in row_text for k in ["Điện thoại", "SĐT", "Telephone"]):
-            match = re.search(
-                r"(?:\+84|0)\d{9,10}\b", re.sub(r"[^\d+]", "", row_text)
-            )
+        if any(k in row_text for k in ["Điện thoại", "SĐT", "Telephone", "Mobile"]):
+            # Lấy ô chứa thông tin (thường là td cuối)
+            cols = row.find_all("td")
+            phone_text = cols[-1].get_text() if cols else row_text
+            
+            # Trích xuất chuỗi số
+            raw_digits = re.sub(r"[^\d+]", "", phone_text)
+            match = re.search(r"(?:\+84|0)\d{8,10}\b", raw_digits)
             if match:
-                return match.group(0)
+                phone_number = match.group(0)
+                if phone_number not in system_hotlines:
+                    return phone_number
+                    
     return "Không có"
 
 
@@ -121,7 +139,6 @@ if start_button and url_input:
                 soup = BeautifulSoup(page.content(), "html.parser")
 
                 detail_links = []
-                # Mở rộng selector để bao quát toàn bộ liên kết (Công ty, Hộ kinh doanh, Chi nhánh,...)
                 anchors = soup.select(
                     "div.tax-listing h3 a, div.table-tax-listing h3 a, table.table-taxinfo h3 a"
                 )
@@ -135,7 +152,6 @@ if start_button and url_input:
                         if href.startswith("/")
                         else href
                     )
-                    # Nhận diện đường dẫn chi tiết mã số thuế (10 chữ số công ty hoặc 13 chữ số hộ kinh doanh/chi nhánh)
                     if (
                         "masothue.com/" in full_url
                         and re.search(r"/\d{9,13}", full_url)
@@ -151,12 +167,12 @@ if start_button and url_input:
                     break
 
                 st.write(
-                    f" Tìm thấy {len(detail_links)} đối tượng (Công ty / Hộ kinh doanh) ở trang {page_idx}."
+                    f" Tìm thấy {len(detail_links)} đối tượng ở trang {page_idx}."
                 )
 
                 for idx, link in enumerate(detail_links, 1):
                     status_text.text(
-                        f"⚡ Trang {page_idx}/{max_pages} - Đang kiểm tra [{idx}/{len(detail_links)}]: {link}"
+                        f"⚡ Trang {page_idx}/{max_pages} - Đang kiểm tra SĐT [{idx}/{len(detail_links)}]: {link}"
                     )
 
                     try:
@@ -169,8 +185,8 @@ if start_button and url_input:
                             page.content(), "html.parser"
                         )
 
-                        # Bỏ qua nếu không có SĐT
-                        phone = extract_phone(detail_soup)
+                        # Bỏ qua nếu không có SĐT chính xác
+                        phone = extract_phone_accurate(detail_soup)
                         if phone == "Không có" or not phone:
                             continue
 
@@ -243,7 +259,7 @@ if start_button and url_input:
 
     if all_data:
         st.success(
-            f"🎉 Đã thu thập được {len(all_data)} đơn vị (Công ty/Hộ kinh doanh) có SĐT!"
+            f"🎉 Đã thu thập được {len(all_data)} đơn vị có SĐT chuẩn!"
         )
         df = pd.DataFrame(all_data)
         st.dataframe(df)
