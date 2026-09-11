@@ -8,15 +8,133 @@ import streamlit as st
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-# 1. Tự động kiểm tra Chromium trên Server
+# 1. Kiểm tra Chromium trên Server
 try:
     subprocess.run(["playwright", "install", "chromium"], check=True)
 except Exception:
     pass
 
-# 2. CSS ẩn nút Header Streamlit
-hide_github_and_edit = """
+# 2. CẤU HÌNH TRANG & CSS MẶT TRĂNG CHI TIẾT SẮC NÉT
+st.set_page_config(
+    page_title="Tool Scraper - Lễ Hội Trung Thu",
+    page_icon="🌕",
+    layout="wide",
+)
+
+mid_autumn_pro_css = """
     <style>
+    /* 1. NỀN ĐÊM CHUYÊN NGHIỆP */
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+        background: linear-gradient(180deg, #090e17 0%, #0f1c2e 60%, #16273e 100%) !important;
+        position: relative;
+        overflow-x: hidden;
+    }
+    
+    /* 2. MẶT TRĂNG REALISTIC VỚI VẾT THIÊN THẠCH & QUẦNG SÁNG MỀM */
+    [data-testid="stAppViewContainer"]::before {
+        content: "";
+        position: fixed;
+        top: 70px;
+        right: 45px;
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background-color: #f6e58d;
+        /* Tạo vân/vết thiên thạch tự nhiên trên mặt trăng bằng Radial Gradients */
+        background-image: 
+            radial-gradient(circle at 30% 30%, rgba(220, 190, 100, 0.4) 12%, transparent 13%),
+            radial-gradient(circle at 65% 45%, rgba(210, 180, 90, 0.35) 18%, transparent 19%),
+            radial-gradient(circle at 45% 70%, rgba(220, 190, 100, 0.3) 10%, transparent 11%),
+            radial-gradient(circle at 75% 75%, rgba(200, 170, 80, 0.25) 8%, transparent 9%);
+        /* Phủ bóng 3D & quầng tỏa sáng mịn màng */
+        box-shadow: 
+            inset -10px -8px 15px rgba(180, 140, 40, 0.5),
+            0 0 25px rgba(246, 229, 141, 0.6),
+            0 0 60px rgba(246, 229, 141, 0.25);
+        z-index: 1 !important;
+        pointer-events: none;
+    }
+
+    /* 3. DẢI ĐÈN LỒNG TRUNG THU ĐUNG ĐƯA GÓC TRÁI */
+    .lantern-group {
+        position: fixed;
+        top: 20px;
+        left: 45px;
+        font-size: 36px;
+        z-index: 10;
+        pointer-events: none;
+        animation: lanternSway 4s ease-in-out infinite alternate;
+        filter: drop-shadow(0 0 8px rgba(230, 57, 70, 0.8));
+    }
+
+    @keyframes lanternSway {
+        0% { transform: rotate(-4deg); }
+        100% { transform: rotate(4deg); }
+    }
+
+    /* 4. KHUNG GIAO DIỆN CHÍNH BO GÓC SẮC NÉT */
+    [data-testid="stMainBlockContainer"] {
+        background-color: rgba(15, 28, 46, 0.88) !important;
+        border: 1px solid rgba(246, 229, 141, 0.35) !important;
+        border-radius: 16px !important;
+        padding: 30px !important;
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6) !important;
+        backdrop-filter: blur(10px) !important;
+        margin-top: 20px !important;
+    }
+
+    /* 5. TỐI ƯU MÀU CHỮ NỔI BẬT */
+    h1, h2, h3, h4, h5, h6, p, label, span, div, .stMarkdown, [data-testid="stWidgetLabel"] {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.9) !important;
+    }
+
+    h1 {
+        color: #f6e58d !important;
+        font-size: 2.1rem !important;
+        font-weight: 800 !important;
+        text-shadow: 0 0 10px rgba(246, 229, 141, 0.4) !important;
+    }
+
+    /* Ô NHẬP LIỆU CHỮ RÕ NÉT */
+    div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="spinbutton"] {
+        background-color: rgba(6, 12, 20, 0.95) !important;
+        border: 1.5px solid rgba(246, 229, 141, 0.6) !important;
+        border-radius: 8px !important;
+    }
+
+    input {
+        color: #f6e58d !important;
+        background-color: transparent !important;
+        font-size: 0.95rem !important;
+        font-weight: bold !important;
+    }
+
+    /* BẢNG BẢNG DỮ LIỆU DATAFRAME */
+    [data-testid="stDataFrame"], div[role="grid"] {
+        background-color: rgba(6, 12, 20, 0.95) !important;
+        border: 1px solid rgba(246, 229, 141, 0.4) !important;
+        border-radius: 8px !important;
+    }
+
+    /* NÚT BẤM ĐÈN LỒNG NỔI BẬT */
+    div.stButton > button {
+        background: linear-gradient(90deg, #e63946 0%, #ff4d6d 100%) !important;
+        color: #ffffff !important;
+        font-size: 1rem !important;
+        font-weight: bold !important;
+        border-radius: 18px !important;
+        border: 1px solid #ffeaa7 !important;
+        box-shadow: 0 4px 15px rgba(230, 57, 70, 0.5) !important;
+        transition: all 0.3s ease;
+    }
+    div.stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(246, 229, 141, 0.7) !important;
+    }
+
+    /* Ẩn nút thừa Streamlit */
     a[href*="github"],
     [data-testid="stHeaderActionElements"] > a,
     button[title*="Edit"],
@@ -26,9 +144,14 @@ hide_github_and_edit = """
     }
     </style>
 """
-st.markdown(hide_github_and_edit, unsafe_allow_html=True)
+st.markdown(mid_autumn_pro_css, unsafe_allow_html=True)
 
-st.title("⚡ Tool Auto Scraper - Chuẩn SĐT Doanh Nghiệp")
+# Đèn lồng trang trí
+st.markdown('<div class="lantern-group">🏮🏮🏮</div>', unsafe_allow_html=True)
+
+# Banner & Tiêu đề
+st.title("🥮 Tool Auto Scraper - Hội Mùa Trăng Rằm 🌕")
+st.caption("✨ Giao diện Trung Thu chuyên nghiệp - Cào Data siêu tốc & không bỏ sót Lead!")
 
 url_input = st.text_input(
     "Dán URL cần cào:",
@@ -41,7 +164,7 @@ max_pages = st.number_input(
     max_value=10,
     value=4,
 )
-start_button = st.button("🚀 Bắt đầu cào dữ liệu", type="primary")
+start_button = st.button("🚀 Bắt đầu cào Data ngay", type="primary")
 
 
 def clean_text(text):
@@ -49,32 +172,21 @@ def clean_text(text):
 
 
 def extract_phone_accurate(soup):
-    """
-    Chỉ tìm SĐT trong bảng thông tin chi tiết của doanh nghiệp.
-    Loại bỏ SĐT hotline hệ thống/footer trùng lặp.
-    """
-    # Số hotline/hỗ trợ của trang cần loại bỏ
     system_hotlines = ["0169764112", "039764112", "0901234567"]
-    
-    # 1. Tìm ưu tiên trong bảng thông tin chi tiết (table-taxinfo)
     main_table = soup.select_one("table.table-taxinfo, div.tax-listing")
     target_area = main_table if main_table else soup
 
     for row in target_area.find_all("tr"):
         row_text = row.get_text()
         if any(k in row_text for k in ["Điện thoại", "SĐT", "Telephone", "Mobile"]):
-            # Lấy ô chứa thông tin (thường là td cuối)
             cols = row.find_all("td")
             phone_text = cols[-1].get_text() if cols else row_text
-            
-            # Trích xuất chuỗi số
             raw_digits = re.sub(r"[^\d+]", "", phone_text)
             match = re.search(r"(?:\+84|0)\d{8,10}\b", raw_digits)
             if match:
                 phone_number = match.group(0)
                 if phone_number not in system_hotlines:
                     return phone_number
-                    
     return "Không có"
 
 
@@ -128,7 +240,7 @@ if start_button and url_input:
                         or "cf-mitigation" in page_content
                     ):
                         status_text.text(
-                            f"🛡️ Phát hiện Cloudflare ở trang {page_idx}, đang tự động chờ..."
+                            f"🛡️ Gặp Cloudflare ở trang {page_idx}, đang tự động chờ 6s..."
                         )
                         time.sleep(6)
 
@@ -162,12 +274,12 @@ if start_button and url_input:
 
                 if not detail_links:
                     st.warning(
-                        f"Trang {page_idx} không tìm thấy đối tượng nào."
+                        f"Trang {page_idx} không tìm thấy đơn vị nào."
                     )
                     break
 
                 st.write(
-                    f" Tìm thấy {len(detail_links)} đối tượng ở trang {page_idx}."
+                    f"✨ Tìm thấy {len(detail_links)} công ty/hộ kinh doanh ở trang {page_idx}."
                 )
 
                 for idx, link in enumerate(detail_links, 1):
@@ -185,7 +297,6 @@ if start_button and url_input:
                             page.content(), "html.parser"
                         )
 
-                        # Bỏ qua nếu không có SĐT chính xác
                         phone = extract_phone_accurate(detail_soup)
                         if phone == "Không có" or not phone:
                             continue
@@ -253,7 +364,7 @@ if start_button and url_input:
             browser.close()
 
     except Exception:
-        st.error("Hệ thống gián đoạn. Vui lòng thử lại sau 2 phút!")
+        st.error("Hệ thống gián đoạn. Vui lòng thử lại sau ít phút!")
 
     status_text.text("✅ Hoàn tất quá trình cào dữ liệu!")
 
@@ -269,7 +380,7 @@ if start_button and url_input:
             df.to_excel(writer, index=False, sheet_name="Danh_Sach")
 
         st.download_button(
-            label="📥 Tải file Excel",
+            label="📥 Tải file Excel về máy",
             data=buffer.getvalue(),
             file_name="danh_sach_don_vi.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
