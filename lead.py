@@ -241,7 +241,7 @@ with tab1:
     st.subheader("Tra cứu thông tin từ masothue.com")
     url_input = st.text_input(
         "Dán URL cần cào:",
-        value="https://masothue.com/tra-cuu-ma-so-thue-theo-tinh/ho-chi-minh-23",
+        value="",
         key="mst_url",
     )
     
@@ -251,7 +251,7 @@ with tab1:
             "Số lượng trang muốn quét (Tối đa 10 trang):",
             min_value=1,
             max_value=10,
-            value=3,
+            value=1,
             key="mst_pages",
         )
     with col_m2:
@@ -408,7 +408,7 @@ with tab2:
     with col_g1:
         gmaps_keyword = st.text_input(
             "1. Nhập từ khóa ngành nghề (VD: Quán cafe, Spa, Ô tô):",
-            value="Quán cafe",
+            value="",
             key="gmaps_key",
         )
     with col_g2:
