@@ -22,7 +22,7 @@ if "history_mst_links" not in st.session_state:
 if "history_gmaps_urls" not in st.session_state:
     st.session_state.history_gmaps_urls = set()
 
-# 3. CẤU HÌNH TRANG & CSS GIAO DIỆN TRUNG THU
+# 3. CẤU HÌNH TRANG & CSS GIAO DIỆN TRUNG THU (ĐÃ ẨN NÚT ĐỔI SÁNG/TỐI)
 st.set_page_config(
     page_title="Multi-Source Scraper - Hội Mùa Trăng",
     page_icon="🌕",
@@ -154,7 +154,7 @@ mid_autumn_tabs_css = """
         color: #ffffff !important;
     }
 
-    /* THANH TOOLBAR GÓC PHẢI BẢNG (FIX ICON) */
+    /* THANH TOOLBAR DATAFRAME */
     [data-testid="stElementToolbar"],
     [data-testid="stDataFrameToolbar"],
     div[data-testid="stElementToolbar"] > div {
@@ -176,6 +176,38 @@ mid_autumn_tabs_css = """
         color: #f6e58d !important;
     }
 
+    /* MENU CÀI ĐẶT POPOVER (DẤU 3 CHẤM GÓC TRÊN BÊN PHẢI) */
+    div[data-baseweb="popover"],
+    div[data-baseweb="popover"] > div,
+    [data-testid="stMainMenu"] ul,
+    div[data-baseweb="menu"] {
+        background-color: #060d17 !important;
+        border: 1.5px solid #f6e58d !important;
+        border-radius: 12px !important;
+        color: #ffffff !important;
+    }
+
+    div[data-baseweb="popover"] button,
+    div[data-baseweb="popover"] li,
+    div[data-baseweb="popover"] label,
+    div[data-baseweb="popover"] span {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+
+    div[data-baseweb="popover"] svg {
+        fill: #f6e58d !important;
+        color: #f6e58d !important;
+    }
+
+    /* ẨN NÚT CHỌN GIAO DIỆN SÁNG/TỐI (SYSTEM / LIGHT / DARK) */
+    div[data-baseweb="segmented-control"],
+    [data-testid="stMainMenu"] ul li:has(div[data-baseweb="segmented-control"]) {
+        display: none !important;
+    }
+
+    /* Ẩn nút GitHub thừa */
     a[href*="github"], [data-testid="stHeaderActionElements"] > a, button[title*="Edit"] {
         display: none !important;
     }
@@ -213,7 +245,6 @@ with tab1:
         key="mst_url",
     )
     
-    # Dùng vertical_alignment="bottom" để nút Reset nằm ngang bằng chân với ô Số lượng
     col_m1, col_m2 = st.columns([3, 1], vertical_alignment="bottom")
     with col_m1:
         max_pages = st.number_input(
@@ -391,13 +422,12 @@ with tab2:
     if selected_district == "Khu vực khác (Tự nhập)":
         gmaps_location = st.text_input(
             "Nhập tên Tỉnh/Thành phố/Khu vực tự do:",
-            value="",
+            value="Hà Nội",
             key="gmaps_loc_custom"
         )
     else:
         gmaps_location = selected_district
 
-    # Căn ngang hàng ô Số lượng và nút Reset cho Google Maps
     col_gm1, col_gm2 = st.columns([3, 1], vertical_alignment="bottom")
     with col_gm1:
         gmaps_max_results = st.number_input(
