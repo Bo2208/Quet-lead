@@ -14,41 +14,39 @@ try:
 except Exception:
     pass
 
-# 2. CẤU HÌNH TRANG & CSS KHẮC PHỤC MÀU CHỮ Ô INPUT
+# 2. CẤU HÌNH TRANG & CSS GIAO DIỆN
 st.set_page_config(
     page_title="Tool Scraper - Lễ Hội Trung Thu",
     page_icon="🌕",
     layout="wide",
 )
 
-mid_autumn_contrast_css = """
+mid_autumn_clean_css = """
     <style>
-    /* 1. NỀN TỔNG THỂ ĐÊM TRUNG THU */
-    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+    /* 1. NỀN TỔNG THỂ VÀ CHO PHÉP CUỘN TRANG TỰ DO */
+    html, body, .stApp, [data-testid="stAppViewContainer"] {
         background: linear-gradient(180deg, #090e17 0%, #0f1c2e 60%, #16273e 100%) !important;
-        position: relative;
-        overflow-x: hidden;
+        overflow-y: auto !important;
     }
     
-    /* 2. MẶT TRĂNG REALISTIC GÓC TRÊN BÊN PHẢI */
+    /* 2. MẶT TRĂNG GÓC TRÊN BÊN PHẢI */
     [data-testid="stAppViewContainer"]::before {
         content: "";
         position: fixed;
         top: 25px;
         right: 45px;
-        width: 90px;
-        height: 90px;
+        width: 85px;
+        height: 85px;
         border-radius: 50%;
         background-color: #f6e58d;
         background-image: 
             radial-gradient(circle at 30% 30%, rgba(220, 190, 100, 0.4) 12%, transparent 13%),
             radial-gradient(circle at 65% 45%, rgba(210, 180, 90, 0.35) 18%, transparent 19%),
-            radial-gradient(circle at 45% 70%, rgba(220, 190, 100, 0.3) 10%, transparent 11%),
-            radial-gradient(circle at 75% 75%, rgba(200, 170, 80, 0.25) 8%, transparent 9%);
+            radial-gradient(circle at 45% 70%, rgba(220, 190, 100, 0.3) 10%, transparent 11%);
         box-shadow: 
             inset -10px -8px 15px rgba(180, 140, 40, 0.5),
             0 0 25px rgba(246, 229, 141, 0.6),
-            0 0 60px rgba(246, 229, 141, 0.25);
+            0 0 50px rgba(246, 229, 141, 0.2);
         z-index: 1 !important;
         pointer-events: none;
     }
@@ -72,16 +70,17 @@ mid_autumn_contrast_css = """
 
     /* 4. KHUNG GIAO DIỆN CHÍNH */
     [data-testid="stMainBlockContainer"] {
-        background-color: rgba(15, 28, 46, 0.88) !important;
+        background-color: rgba(15, 28, 46, 0.92) !important;
         border: 1px solid rgba(246, 229, 141, 0.35) !important;
         border-radius: 16px !important;
-        padding: 30px !important;
+        padding: 30px 30px 50px 30px !important;
         box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6) !important;
         backdrop-filter: blur(10px) !important;
         margin-top: 20px !important;
+        margin-bottom: 50px !important;
     }
 
-    /* 5. TỐI ƯU MÀU NHÃN CHỮ NỔI BẬT */
+    /* 5. TỐI ƯU MÀU CHỮ TIÊU ĐỀ */
     h1, h2, h3, h4, h5, h6, p, label, span, div, .stMarkdown, [data-testid="stWidgetLabel"] {
         color: #ffffff !important;
         font-weight: 600 !important;
@@ -95,48 +94,75 @@ mid_autumn_contrast_css = """
         text-shadow: 0 0 10px rgba(246, 229, 141, 0.4) !important;
     }
 
-    /* 6. FIX FIX FIX: TỐI TỐI KHUNG INPUT & ĐỔI CHỮ TRẮNG TINH NÉT CĂNG */
+    /* 6. KHUNG INPUT NỀN TỐI CHỮ TRẮNG NÉT CĂNG */
     div[data-baseweb="input"], 
     div[data-baseweb="base-input"], 
     div[data-baseweb="spinbutton"],
     [data-testid="stTextInput"] input,
     [data-testid="stNumberInput"] input {
-        background-color: #060d17 !important; /* Nền tối hẳn */
-        color: #ffffff !important;             /* Chữ trắng tinh */
+        background-color: #060d17 !important;
+        color: #ffffff !important;
         border-radius: 8px !important;
         font-size: 1rem !important;
         font-weight: bold !important;
-        -webkit-text-fill-color: #ffffff !important; /* Ép màu chữ rõ trên mọi trình duyệt */
+        -webkit-text-fill-color: #ffffff !important;
     }
 
     div[data-baseweb="input"] {
-        border: 2px solid #f6e58d !important; /* Viền vàng trăng rực rỡ */
+        border: 2px solid #f6e58d !important;
     }
 
-    /* 7. BẢNG DỮ LIỆU DATAFRAME */
-    [data-testid="stDataFrame"], div[role="grid"] {
+    /* 7. BẢNG DATAFRAME TỐI VÀ ICON RÕ NÉT */
+    [data-testid="stDataFrame"] {
         background-color: #060d17 !important;
-        border: 1px solid rgba(246, 229, 141, 0.4) !important;
-        border-radius: 8px !important;
+        border: 1px solid #f6e58d !important;
+        border-radius: 10px !important;
+        padding: 5px !important;
     }
 
-    /* 8. NÚT BẤM ĐÈN LỒNG NỔI BẬT */
+    [data-testid="stDataFrame"] div[role="gridcell"],
+    [data-testid="stDataFrame"] div[role="columnheader"] {
+        background-color: #0c1a2c !important;
+        color: #ffffff !important;
+        border-color: rgba(246, 229, 141, 0.2) !important;
+    }
+
+    [data-testid="stDataFrame"] button, 
+    [data-testid="stDataFrame"] svg {
+        fill: #f6e58d !important;
+        color: #f6e58d !important;
+    }
+
+    /* 8. NÚT DOWNLOAD EXCEL VÀ BUTTON NỔI BẬT */
+    [data-testid="stElementContainer"] button[kind="primary"],
+    [data-testid="stDownloadButton"] button,
     div.stButton > button {
         background: linear-gradient(90deg, #e63946 0%, #ff4d6d 100%) !important;
         color: #ffffff !important;
         font-size: 1rem !important;
         font-weight: bold !important;
         border-radius: 18px !important;
-        border: 1px solid #ffeaa7 !important;
+        border: 1.5px solid #ffeaa7 !important;
         box-shadow: 0 4px 15px rgba(230, 57, 70, 0.5) !important;
+        padding: 10px 24px !important;
         transition: all 0.3s ease;
     }
-    div.stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(246, 229, 141, 0.7) !important;
+
+    [data-testid="stDownloadButton"] button *,
+    div.stButton > button * {
+        color: #ffffff !important;
+        font-weight: bold !important;
+        -webkit-text-fill-color: #ffffff !important;
+        background: transparent !important;
     }
 
-    /* Ẩn bớt nút thừa Streamlit */
+    [data-testid="stDownloadButton"] button:hover,
+    div.stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(246, 229, 141, 0.8) !important;
+    }
+
+    /* Ẩn nút thừa Streamlit */
     a[href*="github"],
     [data-testid="stHeaderActionElements"] > a,
     button[title*="Edit"],
@@ -146,7 +172,7 @@ mid_autumn_contrast_css = """
     }
     </style>
 """
-st.markdown(mid_autumn_contrast_css, unsafe_allow_html=True)
+st.markdown(mid_autumn_clean_css, unsafe_allow_html=True)
 
 # Đèn lồng trang trí
 st.markdown('<div class="lantern-group">🏮🏮🏮</div>', unsafe_allow_html=True)
@@ -157,15 +183,16 @@ st.caption("✨ Giao diện Trung Thu chuyên nghiệp - Cào Data siêu tốc &
 
 url_input = st.text_input(
     "Dán URL cần cào:",
-    value="",
+    value="https://masothue.com/tra-cuu-ma-so-thue-theo-tinh/ho-chi-minh-23",
 )
 
 max_pages = st.number_input(
     "Số lượng trang muốn quét (Tối đa 10 trang/lượt):",
     min_value=1,
     max_value=10,
-    value=1,
+    value=4,
 )
+
 start_button = st.button("🚀 Bắt đầu cào Data ngay", type="primary")
 
 
@@ -175,10 +202,10 @@ def clean_text(text):
 
 def extract_phone_accurate(soup):
     system_hotlines = ["0169764112", "039764112", "0901234567"]
-    main_table = soup.select_one("table.table-taxinfo, div.tax-listing")
+    main_table = soup.select_one("table.table-taxinfo, div.tax-listing, main")
     target_area = main_table if main_table else soup
 
-    for row in target_area.find_all("tr"):
+    for row in target_area.find_all(["tr", "li", "p", "div"]):
         row_text = row.get_text()
         if any(k in row_text for k in ["Điện thoại", "SĐT", "Telephone", "Mobile"]):
             cols = row.find_all("td")
@@ -254,7 +281,7 @@ if start_button and url_input:
 
                 detail_links = []
                 anchors = soup.select(
-                    "div.tax-listing h3 a, div.table-tax-listing h3 a, table.table-taxinfo h3 a"
+                    "div.tax-listing h3 a, div.table-tax-listing h3 a, table.table-taxinfo h3 a, main h3 a"
                 )
                 if not anchors:
                     anchors = soup.select("main a[href]")
@@ -299,11 +326,12 @@ if start_button and url_input:
                             page.content(), "html.parser"
                         )
 
+                        # BỎ QUA NGAY NẾU KHÔNG CÓ SĐT CHUẨN
                         phone = extract_phone_accurate(detail_soup)
                         if phone == "Không có" or not phone:
                             continue
 
-                        title = detail_soup.find("h1")
+                        title = detail_soup.find(["h1", "h2"])
                         entity_name = (
                             clean_text(title.get_text()) if title else "N/A"
                         )
@@ -314,7 +342,8 @@ if start_button and url_input:
                             "N/A",
                             "Không xác định",
                         )
-                        for row in detail_soup.find_all("tr"):
+
+                        for row in detail_soup.find_all(["tr", "li"]):
                             text = row.get_text()
                             cols = row.find_all("td")
                             if ("Mã số thuế" in text or "Mã số" in text) and cols:
@@ -372,7 +401,7 @@ if start_button and url_input:
 
     if all_data:
         st.success(
-            f"🎉 Đã thu thập được {len(all_data)} đơn vị có SĐT chuẩn!"
+            f"🎉 Đã thu thập được {len(all_data)} đơn vị CÓ số điện thoại chuẩn!"
         )
         df = pd.DataFrame(all_data)
         st.dataframe(df)
@@ -384,6 +413,8 @@ if start_button and url_input:
         st.download_button(
             label="📥 Tải file Excel về máy",
             data=buffer.getvalue(),
-            file_name="danh_sach_don_vi.xlsx",
+            file_name="danh_sach_don_vi_co_sdt.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
+    else:
+        st.warning("⚠️ Không thu thập được đơn vị nào có Số Điện Thoại ở các trang này!")
