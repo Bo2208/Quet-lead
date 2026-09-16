@@ -4,6 +4,7 @@ import re
 import subprocess
 import time
 import urllib.parse
+from datetime import datetime
 import pandas as pd
 import streamlit as st
 from bs4 import BeautifulSoup
@@ -241,7 +242,7 @@ with tab1:
     st.subheader("Tra cứu thông tin từ masothue.com")
     url_input = st.text_input(
         "Dán URL cần cào:",
-        value="",
+        value="https://masothue.com/tra-cuu-ma-so-thue-theo-tinh/ho-chi-minh-23",
         key="mst_url",
     )
     
@@ -251,7 +252,7 @@ with tab1:
             "Số lượng trang muốn quét (Tối đa 10 trang):",
             min_value=1,
             max_value=10,
-            value=1,
+            value=3,
             key="mst_pages",
         )
     with col_m2:
@@ -385,7 +386,17 @@ with tab1:
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
                 df.to_excel(writer, index=False, sheet_name="Mã_Số_Thuế")
-            st.download_button("📥 Tải file Excel Mã Số Thuế", buffer.getvalue(), "danh_sach_masothue.xlsx")
+            
+            # Tên file kèm Ngày Giờ để không bị ghi đè gây hỏng file
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            file_name_mst = f"masothue_{timestamp}.xlsx"
+
+            st.download_button(
+                label="📥 Tải file Excel Mã Số Thuế",
+                data=buffer.getvalue(),
+                file_name=file_name_mst,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
 
 
 # ==========================================
@@ -408,7 +419,7 @@ with tab2:
     with col_g1:
         gmaps_keyword = st.text_input(
             "1. Nhập từ khóa ngành nghề (VD: Quán cafe, Spa, Ô tô):",
-            value="",
+            value="Quán cafe",
             key="gmaps_key",
         )
     with col_g2:
@@ -560,4 +571,14 @@ with tab2:
             buffer_gmaps = io.BytesIO()
             with pd.ExcelWriter(buffer_gmaps, engine="openpyxl") as writer:
                 df_gmaps.to_excel(writer, index=False, sheet_name="Google_Maps")
-            st.download_button("📥 Tải file Excel Google Maps", buffer_gmaps.getvalue(), "danh_sach_gmaps.xlsx")
+
+            # Tên file kèm Ngày Giờ
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            file_name_gmaps = f"gmaps_{timestamp}.xlsx"
+
+            st.download_button(
+                label="📥 Tải file Excel Google Maps",
+                data=buffer_gmaps.getvalue(),
+                file_name=file_name_gmaps,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
