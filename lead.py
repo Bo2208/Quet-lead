@@ -23,7 +23,7 @@ if "history_mst_links" not in st.session_state:
 if "history_gmaps_urls" not in st.session_state:
     st.session_state.history_gmaps_urls = set()
 
-# 3. CẤU HÌNH TRANG & CSS GIAO DIỆN TRUNG THU (ĐÃ ẨN NÚT ĐỔI SÁNG/TỐI)
+# 3. CẤU HÌNH TRANG & CSS GIAO DIỆN TRUNG THU
 st.set_page_config(
     page_title="Multi-Source Scraper - Hội Mùa Trăng",
     page_icon="🌕",
@@ -202,7 +202,7 @@ mid_autumn_tabs_css = """
         color: #f6e58d !important;
     }
 
-    /* ẨN NÚT CHỌN GIAO DIỆN SÁNG/TỐI (SYSTEM / LIGHT / DARK) */
+    /* ẨN NÚT CHỌN GIAO DIỆN SÁNG/TỐI */
     div[data-baseweb="segmented-control"],
     [data-testid="stMainMenu"] ul li:has(div[data-baseweb="segmented-control"]) {
         display: none !important;
@@ -258,7 +258,7 @@ with tab1:
     with col_m2:
         if st.button("🔄 Reset lịch sử cào MST", key="reset_mst", use_container_width=True):
             st.session_state.history_mst_links.clear()
-            st.success("Đã xóa bộ nhớ tạm!")
+            st.success("Đã xóa bộ nhớ tạm! Lần cào tới sẽ quét lại từ đầu.")
 
     start_mst_button = st.button("🚀 Bắt đầu cào Mã Số Thuế", type="primary", key="btn_mst")
 
@@ -327,7 +327,6 @@ with tab1:
                             st.session_state.history_mst_links.add(full_url)
 
                     if not detail_links:
-                        st.warning(f"Trang {page_idx} không tìm thấy đơn vị mới nào (hoặc đã cào trước đó).")
                         break
 
                     for idx, link in enumerate(detail_links, 1):
@@ -387,7 +386,6 @@ with tab1:
             with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
                 df.to_excel(writer, index=False, sheet_name="Mã_Số_Thuế")
             
-            # Tên file kèm Ngày Giờ để không bị ghi đè gây hỏng file
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             file_name_mst = f"masothue_{timestamp}.xlsx"
 
@@ -397,6 +395,8 @@ with tab1:
                 file_name=file_name_mst,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
+        else:
+            st.warning("⚠️ Không thu thập được dữ liệu mới nào (Có thể do các link này đã được cào trước đó). Bạn bấm nút '🔄 Reset lịch sử cào MST' ở trên để quét lại từ đầu nhé!")
 
 
 # ==========================================
@@ -572,7 +572,6 @@ with tab2:
             with pd.ExcelWriter(buffer_gmaps, engine="openpyxl") as writer:
                 df_gmaps.to_excel(writer, index=False, sheet_name="Google_Maps")
 
-            # Tên file kèm Ngày Giờ
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             file_name_gmaps = f"gmaps_{timestamp}.xlsx"
 
