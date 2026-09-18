@@ -177,7 +177,7 @@ mid_autumn_tabs_css = """
         color: #f6e58d !important;
     }
 
-    /* MENU CÀI ĐẶT POPOVER (DẤU 3 CHẤM GÓC TRÊN BÊN PHẢI) */
+    /* MENU CÀI ĐẶT POPOVER */
     div[data-baseweb="popover"],
     div[data-baseweb="popover"] > div,
     [data-testid="stMainMenu"] ul,
@@ -242,7 +242,7 @@ with tab1:
     st.subheader("Tra cứu thông tin từ masothue.com")
     url_input = st.text_input(
         "Dán URL cần cào:",
-        value="",
+        value="https://masothue.com/tra-cuu-ma-so-thue-theo-loai-hinh-doanh-nghiep/ho-kinh-doanh-ca-the-20",
         key="mst_url",
     )
     
@@ -258,7 +258,7 @@ with tab1:
     with col_m2:
         if st.button("🔄 Reset lịch sử cào MST", key="reset_mst", use_container_width=True):
             st.session_state.history_mst_links.clear()
-            st.success("Đã xóa bộ nhớ tạm! Lần cào tới sẽ quét lại từ đầu.")
+            st.success("Đã xóa bộ nhớ tạm!")
 
     start_mst_button = st.button("🚀 Bắt đầu cào Mã Số Thuế", type="primary", key="btn_mst")
 
@@ -266,28 +266,29 @@ with tab1:
         return re.sub(r"\s+", " ", text).strip() if text else "N/A"
 
     def extract_phone_accurate(soup):
-        system_hotlines = ["0169764112", "039764112", "0901234567"]
-        main_table = soup.select_one("table.table-taxinfo, div.tax-listing, main, div.container")
-        target_area = main_table if main_table else soup
-
-        for row in target_area.find_all(["tr", "li", "p", "div"]):
+        # Quét thông minh qua thẻ chứa SĐT
+        for row in soup.find_all(["tr", "li", "p", "div", "td"]):
             row_text = row.get_text()
-            if any(k in row_text for k in ["Điện thoại", "SĐT", "Telephone", "Mobile"]):
+            if any(k in row_text for k in ["Điện thoại", "SĐT", "Telephone", "Mobile", "ĐT"]):
                 cols = row.find_all("td")
                 phone_text = cols[-1].get_text() if cols else row_text
                 raw_digits = re.sub(r"[^\d+]", "", phone_text)
                 match = re.search(r"(?:\+84|0)\d{8,10}\b", raw_digits)
                 if match:
-                    phone_number = normalize_phone_number(match.group(0))
-                    if phone_number not in system_hotlines:
-                        return phone_number
+                    return normalize_phone_number(match.group(0))
+        
+        # Quét Regex dự phòng toàn trang
+        page_text = soup.get_text()
+        phone_match = re.search(r"(?:\+84|0)(?:3|5|7|8|9|2)\d{8}\b", re.sub(r"[^\d+]", " ", page_text))
+        if phone_match:
+            return normalize_phone_number(phone_match.group(0))
+            
         return "Không có"
 
     if start_mst_button and url_input:
         all_data = []
         status_text = st.empty()
 
-        # Làm sạch URL đầu vào (Xóa bớt ?page=X nếu người dùng dán vào)
         base_clean_url = re.sub(r"[\?&]page=\d+", "", url_input.strip())
 
         try:
@@ -304,11 +305,7 @@ with tab1:
                 page.route("**/*.{png,jpg,jpeg,svg,woff,woff2,mp4}", lambda route: route.abort())
 
                 for page_idx in range(1, max_pages + 1):
-                    # Tự tạo URL phân trang chuẩn
-                    if "?" in base_clean_url:
-                        current_url = f"{base_clean_url}&page={page_idx}"
-                    else:
-                        current_url = f"{base_clean_url}?page={page_idx}"
+                    current_url = f"{base_clean_url}?page={page_idx}" if "?" not in base_clean_url else f"{base_clean_url}&page={page_idx}"
 
                     status_text.text(f"⏳ Đang tải trang {page_idx}/{max_pages}: {current_url}")
                     try:
@@ -321,14 +318,12 @@ with tab1:
                     soup = BeautifulSoup(page.content(), "html.parser")
                     detail_links = []
                     
-                    # Bổ sung bộ lọc thẻ rộng hơn cho Hộ kinh doanh & Doanh nghiệp
                     anchors = soup.select("div.tax-listing h3 a, div.table-tax-listing h3 a, main h3 a, a[href*='masothue.com/']")
 
                     for a_tag in anchors:
                         href = a_tag.get("href", "")
                         full_url = f"https://masothue.com{href}" if href.startswith("/") else href
                         
-                        # Fix Regex chấp nhận cả MST có dấu gạch ngang dạng 8xxxxxxx-001 của Hộ Kinh Doanh
                         if (
                             "masothue.com/" in full_url 
                             and re.search(r"/\d{9,13}(-\d{3})?", full_url) 
@@ -343,15 +338,13 @@ with tab1:
                         break
 
                     for idx, link in enumerate(detail_links, 1):
-                        status_text.text(f"⚡ MST Trang {page_idx}/{max_pages} - Đang kiểm tra SĐT [{idx}/{len(detail_links)}]")
+                        status_text.text(f"⚡ MST Trang {page_idx}/{max_pages} - Đang kiểm tra [{idx}/{len(detail_links)}]: {link}")
                         try:
                             page.goto(link, wait_until="domcontentloaded", timeout=30000)
-                            time.sleep(random.uniform(1.0, 1.8))
+                            time.sleep(random.uniform(0.8, 1.5))
                             detail_soup = BeautifulSoup(page.content(), "html.parser")
 
                             phone = extract_phone_accurate(detail_soup)
-                            if phone == "Không có" or not phone:
-                                continue
 
                             title = detail_soup.find(["h1", "h2"])
                             entity_name = clean_text(title.get_text()) if title else "N/A"
@@ -389,7 +382,7 @@ with tab1:
 
         status_text.text("✅ Hoàn tất quá trình cào dữ liệu Mã Số Thuế!")
         if all_data:
-            st.success(f"🎉 Đã thu thập được {len(all_data)} đơn vị mới có SĐT chuẩn!")
+            st.success(f"🎉 Đã thu thập thành công {len(all_data)} đơn vị!")
             df = pd.DataFrame(all_data)
             st.dataframe(df)
 
@@ -407,7 +400,7 @@ with tab1:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
         else:
-            st.warning("⚠️ Không thu thập được dữ liệu mới nào. Hãy thử bấm '🔄 Reset lịch sử cào MST' ở trên rồi bấm cào lại nhé!")
+            st.warning("⚠️ Không thu thập được dữ liệu. Bạn bấm nút '🔄 Reset lịch sử cào MST' ở trên rồi thử cào lại nhé!")
 
 
 # ==========================================
@@ -430,7 +423,7 @@ with tab2:
     with col_g1:
         gmaps_keyword = st.text_input(
             "1. Nhập từ khóa ngành nghề (VD: Quán cafe, Spa, Ô tô):",
-            value="",
+            value="Quán cafe",
             key="gmaps_key",
         )
     with col_g2:
