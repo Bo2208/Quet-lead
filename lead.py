@@ -267,7 +267,7 @@ with tab1:
 
     def extract_phone_accurate(soup):
         system_hotlines = ["0169764112", "039764112", "0901234567"]
-        main_table = soup.select_one("table.table-taxinfo, div.tax-listing, main")
+        main_table = soup.select_one("table.table-taxinfo, div.tax-listing, main, div.container")
         target_area = main_table if main_table else soup
 
         for row in target_area.find_all(["tr", "li", "p", "div"]):
@@ -287,6 +287,9 @@ with tab1:
         all_data = []
         status_text = st.empty()
 
+        # Làm sạch URL đầu vào (Xóa bớt ?page=X nếu người dùng dán vào)
+        base_clean_url = re.sub(r"[\?&]page=\d+", "", url_input.strip())
+
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(
@@ -300,9 +303,13 @@ with tab1:
                 page = context.new_page()
                 page.route("**/*.{png,jpg,jpeg,svg,woff,woff2,mp4}", lambda route: route.abort())
 
-                current_url = url_input
-
                 for page_idx in range(1, max_pages + 1):
+                    # Tự tạo URL phân trang chuẩn
+                    if "?" in base_clean_url:
+                        current_url = f"{base_clean_url}&page={page_idx}"
+                    else:
+                        current_url = f"{base_clean_url}?page={page_idx}"
+
                     status_text.text(f"⏳ Đang tải trang {page_idx}/{max_pages}: {current_url}")
                     try:
                         page.goto(current_url, wait_until="networkidle", timeout=45000)
@@ -313,20 +320,26 @@ with tab1:
 
                     soup = BeautifulSoup(page.content(), "html.parser")
                     detail_links = []
-                    anchors = soup.select("div.tax-listing h3 a, div.table-tax-listing h3 a, main h3 a")
+                    
+                    # Bổ sung bộ lọc thẻ rộng hơn cho Hộ kinh doanh & Doanh nghiệp
+                    anchors = soup.select("div.tax-listing h3 a, div.table-tax-listing h3 a, main h3 a, a[href*='masothue.com/']")
 
                     for a_tag in anchors:
                         href = a_tag.get("href", "")
                         full_url = f"https://masothue.com{href}" if href.startswith("/") else href
+                        
+                        # Fix Regex chấp nhận cả MST có dấu gạch ngang dạng 8xxxxxxx-001 của Hộ Kinh Doanh
                         if (
                             "masothue.com/" in full_url 
-                            and re.search(r"/\d{9,13}", full_url) 
+                            and re.search(r"/\d{9,13}(-\d{3})?", full_url) 
                             and full_url not in st.session_state.history_mst_links
                         ):
-                            detail_links.append(full_url)
-                            st.session_state.history_mst_links.add(full_url)
+                            if full_url not in detail_links:
+                                detail_links.append(full_url)
+                                st.session_state.history_mst_links.add(full_url)
 
                     if not detail_links:
+                        st.warning(f"Trang {page_idx} không tìm thấy link đơn vị mới nào.")
                         break
 
                     for idx, link in enumerate(detail_links, 1):
@@ -368,8 +381,6 @@ with tab1:
                         except Exception:
                             continue
 
-                    current_url = f"{url_input}&page={page_idx + 1}" if "?" in url_input else f"{url_input}?page={page_idx + 1}"
-
                 context.close()
                 browser.close()
 
@@ -396,7 +407,7 @@ with tab1:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
         else:
-            st.warning("⚠️ Không thu thập được dữ liệu mới nào (Có thể do các link này đã được cào trước đó). Bạn bấm nút '🔄 Reset lịch sử cào MST' ở trên để quét lại từ đầu nhé!")
+            st.warning("⚠️ Không thu thập được dữ liệu mới nào. Hãy thử bấm '🔄 Reset lịch sử cào MST' ở trên rồi bấm cào lại nhé!")
 
 
 # ==========================================
