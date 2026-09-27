@@ -402,7 +402,7 @@ with tab1:
 
 
 # ==========================================
-# TAB 2: GOOGLE MAPS (F&B + BÁN LẺ + BẢN ĐỒ ĐA ĐIỂM)
+# TAB 2: GOOGLE MAPS (SÂU VÀ QUÉT SẠCH BẢN ĐỒ)
 # ==========================================
 with tab2:
     st.subheader("Tìm kiếm Lead Doanh Nghiệp / Cửa Hàng Bán Lẻ & F&B trên Google Maps")
@@ -421,7 +421,7 @@ with tab2:
     with col_g1:
         gmaps_keyword = st.text_input(
             "1. Nhập từ khóa ngành nghề (Bán lẻ / F&B / Dịch vụ):",
-            value="Cửa hàng thời trang",
+            value="",
             help="Ví dụ: Cửa hàng quần áo, Shop mỹ phẩm, Tiệm tạp hóa, Quán cafe, Siêu thị, Cửa hàng điện thoại...",
             key="gmaps_key",
         )
@@ -448,7 +448,7 @@ with tab2:
             "Mục tiêu số lượng cửa hàng muốn quét (Tối đa 100):",
             min_value=5,
             max_value=100,
-            value=30,
+            value=40,
             key="gmaps_max",
         )
     with col_gm2:
@@ -461,24 +461,26 @@ with tab2:
     if start_gmaps_button and gmaps_keyword:
         gmaps_data = []
         status_gmaps = st.empty()
-        
-        sub_locations = [gmaps_location]
+
+        # Tạo danh sách tuyến đường/phường trọng điểm để quét vẹt cạn
+        sub_locations = [f"{gmaps_keyword} {gmaps_location}"]
         if "Quận 1" in gmaps_location:
             sub_locations = [
+                f"{gmaps_keyword} Nguyễn Trãi {gmaps_location}",
+                f"{gmaps_keyword} Lý Tự Trọng {gmaps_location}",
+                f"{gmaps_keyword} Lê Thánh Tôn {gmaps_location}",
                 f"{gmaps_keyword} Bến Nghé {gmaps_location}",
                 f"{gmaps_keyword} Bến Thành {gmaps_location}",
                 f"{gmaps_keyword} Tân Định {gmaps_location}",
                 f"{gmaps_keyword} Phạm Ngũ Lão {gmaps_location}",
-                f"{gmaps_keyword} Cống Quỳnh {gmaps_location}",
             ]
         elif "Quận 3" in gmaps_location:
             sub_locations = [
+                f"{gmaps_keyword} Lê Văn Sỹ {gmaps_location}",
+                f"{gmaps_keyword} Nguyễn Đình Chiểu {gmaps_location}",
                 f"{gmaps_keyword} Võ Thị Sáu {gmaps_location}",
                 f"{gmaps_keyword} Cao Thắng {gmaps_location}",
-                f"{gmaps_keyword} Lê Văn Sỹ {gmaps_location}",
             ]
-        else:
-            sub_locations = [f"{gmaps_keyword} {gmaps_location}"]
 
         try:
             with sync_playwright() as p:
@@ -507,19 +509,19 @@ with tab2:
                     encoded_query = urllib.parse.quote(sub_loc)
                     maps_url = f"https://www.google.com/maps/search/{encoded_query}"
 
-                    status_gmaps.text(f"📍 Đang di chuyển bản đồ đến khu vực: '{sub_loc}'...")
+                    status_gmaps.text(f"📍 Đang di chuyển bản đồ quét khu vực: '{sub_loc}'...")
                     try:
                         page.goto(maps_url, wait_until="domcontentloaded", timeout=35000)
-                        time.sleep(2.5)
+                        time.sleep(3)
                     except Exception:
                         continue
 
-                    scroll_count = 0
-                    while scroll_count < 10 and len(unique_urls) < gmaps_max_results:
-                        scroll_count += 1
-                        page.mouse.wheel(0, 3000)
-                        time.sleep(1.2)
+                    # THUẬT TOÁN CUỘN TRỰC TIẾP VÀO THẺ CONTAINER `div[role="feed"]`
+                    no_change_count = 0
+                    while len(unique_urls) < gmaps_max_results and no_change_count < 8:
+                        prev_count = len(unique_urls)
 
+                        # Tải danh sách cửa hàng
                         items = page.query_selector_all('a[href*="/maps/place/"]')
                         for item in items:
                             href = item.get_attribute("href")
@@ -528,19 +530,38 @@ with tab2:
                                 if len(unique_urls) >= gmaps_max_results:
                                     break
 
+                        status_gmaps.text(f"🔄 Đang cuộn danh sách Maps [{len(unique_urls)}/{gmaps_max_results} cửa hàng] - Khu vực: '{sub_loc}'...")
+
+                        # Cuộn chuột trực tiếp vào khung danh sách bên trái
+                        try:
+                            feed = page.query_selector('div[role="feed"]')
+                            if feed:
+                                feed.evaluate('el => el.scrollTop += 5000')
+                            else:
+                                page.mouse.wheel(0, 3000)
+                        except Exception:
+                            page.mouse.wheel(0, 3000)
+
+                        time.sleep(1.5)
+
+                        if len(unique_urls) == prev_count:
+                            no_change_count += 1
+                        else:
+                            no_change_count = 0
+
                 for url in unique_urls:
                     st.session_state.history_gmaps_urls.add(url)
 
                 if not unique_urls:
                     st.warning(f"⚠️ Không tìm thấy địa điểm MỚI nào. Bấm 'Reset lịch sử cào Maps' để cào lại từ đầu.")
                 else:
-                    st.write(f"✨ Đã tìm thấy **{len(unique_urls)}** cửa hàng/địa điểm MỚI chưa trùng tại **{gmaps_location}**.")
+                    st.write(f"✨ Đã tìm đủ **{len(unique_urls)}** cửa hàng/địa điểm MỚI tại **{gmaps_location}**.")
 
                     for idx, place_url in enumerate(unique_urls, 1):
-                        status_gmaps.text(f"⚡ Trích xuất Google Maps [{idx}/{len(unique_urls)}]: Đang lấy thông tin cửa hàng...")
+                        status_gmaps.text(f"⚡ Trích xuất thông tin cửa hàng [{idx}/{len(unique_urls)}]: Đang xử lý SĐT & Địa chỉ...")
                         try:
                             page.goto(place_url, wait_until="domcontentloaded", timeout=30000)
-                            time.sleep(1.8)
+                            time.sleep(1.5)
 
                             place_soup = BeautifulSoup(page.content(), "html.parser")
                             
