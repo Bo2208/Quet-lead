@@ -402,7 +402,7 @@ with tab1:
 
 
 # ==========================================
-# TAB 2: GOOGLE MAPS (SÂU VÀ QUÉT SẠCH BẢN ĐỒ)
+# TAB 2: GOOGLE MAPS (CÓ BỘ LỌC TỰ ĐỘNG THEO YÊU CẦU)
 # ==========================================
 with tab2:
     st.subheader("Tìm kiếm Lead Doanh Nghiệp / Cửa Hàng Bán Lẻ & F&B trên Google Maps")
@@ -422,7 +422,7 @@ with tab2:
         gmaps_keyword = st.text_input(
             "1. Nhập từ khóa ngành nghề (Bán lẻ / F&B / Dịch vụ):",
             value="",
-            help="Ví dụ: Cửa hàng quần áo, Shop mỹ phẩm, Tiệm tạp hóa, Quán cafe, Siêu thị, Cửa hàng điện thoại...",
+            help="Mẹo: Nhập 'Cửa hàng quần áo' nếu chỉ muốn lấy shop quần áo, tránh bị lẫn sang cửa hàng trang sức/giày dép.",
             key="gmaps_key",
         )
     with col_g2:
@@ -462,7 +462,6 @@ with tab2:
         gmaps_data = []
         status_gmaps = st.empty()
 
-        # Tạo danh sách tuyến đường/phường trọng điểm để quét vẹt cạn
         sub_locations = [f"{gmaps_keyword} {gmaps_location}"]
         if "Quận 1" in gmaps_location:
             sub_locations = [
@@ -516,12 +515,10 @@ with tab2:
                     except Exception:
                         continue
 
-                    # THUẬT TOÁN CUỘN TRỰC TIẾP VÀO THẺ CONTAINER `div[role="feed"]`
                     no_change_count = 0
                     while len(unique_urls) < gmaps_max_results and no_change_count < 8:
                         prev_count = len(unique_urls)
 
-                        # Tải danh sách cửa hàng
                         items = page.query_selector_all('a[href*="/maps/place/"]')
                         for item in items:
                             href = item.get_attribute("href")
@@ -532,7 +529,6 @@ with tab2:
 
                         status_gmaps.text(f"🔄 Đang cuộn danh sách Maps [{len(unique_urls)}/{gmaps_max_results} cửa hàng] - Khu vực: '{sub_loc}'...")
 
-                        # Cuộn chuột trực tiếp vào khung danh sách bên trái
                         try:
                             feed = page.query_selector('div[role="feed"]')
                             if feed:
@@ -555,7 +551,7 @@ with tab2:
                 if not unique_urls:
                     st.warning(f"⚠️ Không tìm thấy địa điểm MỚI nào. Bấm 'Reset lịch sử cào Maps' để cào lại từ đầu.")
                 else:
-                    st.write(f"✨ Đã tìm đủ **{len(unique_urls)}** cửa hàng/địa điểm MỚI tại **{gmaps_location}**.")
+                    st.write(f"✨ Đã tìm thấy **{len(unique_urls)}** cửa hàng/địa điểm MỚI tại **{gmaps_location}**.")
 
                     for idx, place_url in enumerate(unique_urls, 1):
                         status_gmaps.text(f"⚡ Trích xuất thông tin cửa hàng [{idx}/{len(unique_urls)}]: Đang xử lý SĐT & Địa chỉ...")
