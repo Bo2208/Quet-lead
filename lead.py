@@ -217,7 +217,7 @@ mid_autumn_tabs_css = """
 st.markdown(mid_autumn_tabs_css, unsafe_allow_html=True)
 
 st.title("🥮 Multi-Source Auto Scraper 🌕")
-st.caption("✨ Hệ thống cào Lead đa kênh chuyên nghiệp: Mã Số Thuế & Google Maps")
+st.caption("✨ Hệ thống cào Lead đa kênh chuyên nghiệp: Mã Số Thuế & Google Maps Đa Ngành")
 
 # HÀM CHUẨN HÓA SỐ ĐIỆN THOẠI CHUYỂN +84 THÀNH ĐẦU 0
 def normalize_phone_number(raw_phone):
@@ -233,7 +233,7 @@ def normalize_phone_number(raw_phone):
     return raw_phone
 
 # TẠO 2 TAB CHỨC NĂNG
-tab1, tab2 = st.tabs(["🏛️ Cào Mã Số Thuế (MaSoThue)", "📍 Cào Google Maps Lead"])
+tab1, tab2 = st.tabs(["🏛️ Cào Mã Số Thuế (MaSoThue)", "📍 Cào Google Maps Lead (F&B + Bán Lẻ)"])
 
 # ==========================================
 # TAB 1: MASOTHUE.COM
@@ -242,7 +242,7 @@ with tab1:
     st.subheader("Tra cứu thông tin từ masothue.com")
     url_input = st.text_input(
         "Dán URL cần cào:",
-        value="https://masothue.com/tra-cuu-ma-so-thue-theo-loai-hinh-doanh-nghiep/ho-kinh-doanh-ca-the-20",
+        value="",
         key="mst_url",
     )
     
@@ -266,7 +266,6 @@ with tab1:
         return re.sub(r"\s+", " ", text).strip() if text else "N/A"
 
     def extract_phone_accurate(soup):
-        # Quét thông minh qua thẻ chứa SĐT
         for row in soup.find_all(["tr", "li", "p", "div", "td"]):
             row_text = row.get_text()
             if any(k in row_text for k in ["Điện thoại", "SĐT", "Telephone", "Mobile", "ĐT"]):
@@ -277,7 +276,6 @@ with tab1:
                 if match:
                     return normalize_phone_number(match.group(0))
         
-        # Quét Regex dự phòng toàn trang
         page_text = soup.get_text()
         phone_match = re.search(r"(?:\+84|0)(?:3|5|7|8|9|2)\d{8}\b", re.sub(r"[^\d+]", " ", page_text))
         if phone_match:
@@ -404,10 +402,10 @@ with tab1:
 
 
 # ==========================================
-# TAB 2: GOOGLE MAPS
+# TAB 2: GOOGLE MAPS (F&B + BÁN LẺ + BẢN ĐỒ ĐA ĐIỂM)
 # ==========================================
 with tab2:
-    st.subheader("Tìm kiếm Lead Doanh Nghiệp / Cửa Hàng trên Google Maps")
+    st.subheader("Tìm kiếm Lead Doanh Nghiệp / Cửa Hàng Bán Lẻ & F&B trên Google Maps")
 
     district_list = [
         "Quận 1, TP.HCM", "Quận 3, TP.HCM", "Quận 4, TP.HCM", "Quận 5, TP.HCM", 
@@ -422,8 +420,9 @@ with tab2:
     col_g1, col_g2 = st.columns([1.5, 1])
     with col_g1:
         gmaps_keyword = st.text_input(
-            "1. Nhập từ khóa ngành nghề (VD: Quán cafe, Spa, Ô tô):",
-            value="Quán cafe",
+            "1. Nhập từ khóa ngành nghề (Bán lẻ / F&B / Dịch vụ):",
+            value="Cửa hàng thời trang",
+            help="Ví dụ: Cửa hàng quần áo, Shop mỹ phẩm, Tiệm tạp hóa, Quán cafe, Siêu thị, Cửa hàng điện thoại...",
             key="gmaps_key",
         )
     with col_g2:
@@ -446,10 +445,10 @@ with tab2:
     col_gm1, col_gm2 = st.columns([3, 1], vertical_alignment="bottom")
     with col_gm1:
         gmaps_max_results = st.number_input(
-            "Số lượng địa điểm muốn quét thêm (Tối đa 30):",
+            "Mục tiêu số lượng cửa hàng muốn quét (Tối đa 100):",
             min_value=5,
-            max_value=30,
-            value=5,
+            max_value=100,
+            value=30,
             key="gmaps_max",
         )
     with col_gm2:
@@ -457,14 +456,30 @@ with tab2:
             st.session_state.history_gmaps_urls.clear()
             st.success("Đã xóa lịch sử trùng Google Maps!")
 
-    start_gmaps_button = st.button("🚀 Bắt đầu cào Google Maps", type="primary", key="btn_gmaps")
+    start_gmaps_button = st.button("🚀 Bắt đầu quét đa điểm Google Maps", type="primary", key="btn_gmaps")
 
     if start_gmaps_button and gmaps_keyword:
         gmaps_data = []
         status_gmaps = st.empty()
-        search_query = f"{gmaps_keyword} {gmaps_location}".strip()
-        encoded_query = urllib.parse.quote(search_query)
-        maps_url = f"https://www.google.com/maps/search/{encoded_query}"
+        
+        # Mở rộng danh sách sub-areas nếu quét theo Quận ở TP.HCM để di chuyển trên bản đồ
+        sub_locations = [gmaps_location]
+        if "Quận 1" in gmaps_location:
+            sub_locations = [
+                f"{gmaps_keyword} Bến Nghé {gmaps_location}",
+                f"{gmaps_keyword} Bến Thành {gmaps_location}",
+                f"{gmaps_keyword} Tân Định {gmaps_location}",
+                f"{gmaps_keyword} Phạm Ngũ Lão {gmaps_location}",
+                f"{gmaps_keyword} Cống Quỳnh {gmaps_location}",
+            ]
+        elif "Quận 3" in gmaps_location:
+            sub_locations = [
+                f"{gmaps_keyword} Võ Thị Sáu {gmaps_location}",
+                f"{gmaps_keyword} Cao Thắng {gmaps_location}",
+                f"{gmaps_keyword} Lê Văn Sỹ {gmaps_location}",
+            ]
+        else:
+            sub_locations = [f"{gmaps_keyword} {gmaps_location}"]
 
         try:
             with sync_playwright() as p:
@@ -484,35 +499,53 @@ with tab2:
                 )
                 page = context.new_page()
 
-                status_gmaps.text(f"⏳ Đang mở Google Maps tìm kiếm: '{search_query}'...")
-                page.goto(maps_url, wait_until="domcontentloaded", timeout=45000)
-                time.sleep(3)
-
-                scroll_times = max(3, int(len(st.session_state.history_gmaps_urls) / 3) + 3)
-                for _ in range(scroll_times):
-                    page.mouse.wheel(0, 3000)
-                    time.sleep(1.2)
-
-                items = page.query_selector_all('a[href*="/maps/place/"]')
                 unique_urls = []
-                for item in items:
-                    href = item.get_attribute("href")
-                    if href and href not in st.session_state.history_gmaps_urls:
-                        unique_urls.append(href)
-                        st.session_state.history_gmaps_urls.add(href)
+
+                # VÒNG LẶP DI CHUYỂN BẢN ĐỒ TỰ ĐỘNG QUA CÁC CỤM KHU VỰC CỦA QUẬN
+                for sub_loc in sub_locations:
                     if len(unique_urls) >= gmaps_max_results:
                         break
 
-                if not unique_urls:
-                    st.warning(f"⚠️ Không tìm thấy địa điểm MỚI nào với từ khóa '{search_query}'. Bấm 'Reset lịch sử cào Maps' để cào lại từ đầu.")
-                else:
-                    st.write(f"✨ Thu thập được **{len(unique_urls)}** địa điểm MỚI chưa trùng tại **{gmaps_location}**.")
+                    encoded_query = urllib.parse.quote(sub_loc)
+                    maps_url = f"https://www.google.com/maps/search/{encoded_query}"
 
+                    status_gmaps.text(f"📍 Đang di chuyển bản đồ đến khu vực: '{sub_loc}'...")
+                    try:
+                        page.goto(maps_url, wait_until="domcontentloaded", timeout=35000)
+                        time.sleep(2.5)
+                    except Exception:
+                        continue
+
+                    # Cuộn trực tiếp khung danh sách để kích hoạt load cửa hàng mới
+                    scroll_count = 0
+                    while scroll_count < 10 and len(unique_urls) < gmaps_max_results:
+                        scroll_count += 1
+                        page.mouse.wheel(0, 3000)
+                        time.sleep(1.2)
+
+                        items = page.query_selector_all('a[href*="/maps/place/"]')
+                        for item in items:
+                            href = item.get_attribute("href")
+                            if href and href not in st.session_state.history_gmaps_urls and href not in unique_urls:
+                                unique_urls.append(href)
+                                if len(unique_urls) >= gmaps_max_results:
+                                    break
+
+                # Lưu vào bộ nhớ tạm
+                for url in unique_urls:
+                    st.session_state.history_gmaps_urls.add(url)
+
+                if not unique_urls:
+                    st.warning(f"⚠️ Không tìm thấy địa điểm MỚI nào. Bấm 'Reset lịch sử cào Maps' để cào lại từ đầu.")
+                else:
+                    st.write(f"✨ Đã tìm thấy **{len(unique_urls)}** cửa hàng/địa điểm MỚI chưa trùng tại **{gmaps_location}**.")
+
+                    # BẮT ĐẦU TRÍCH XUẤT THÔNG TIN CHI TIẾT
                     for idx, place_url in enumerate(unique_urls, 1):
-                        status_gmaps.text(f"⚡ Google Maps [{idx}/{len(unique_urls)}]: Đang trích xuất thông tin...")
+                        status_gmaps.text(f"⚡ Trích xuất Google Maps [{idx}/{len(unique_urls)}]: Đang lấy thông tin cửa hàng...")
                         try:
                             page.goto(place_url, wait_until="domcontentloaded", timeout=30000)
-                            time.sleep(2)
+                            time.sleep(1.8)
 
                             place_soup = BeautifulSoup(page.content(), "html.parser")
                             
@@ -523,11 +556,19 @@ with tab2:
                             address = "N/A"
                             website = "N/A"
                             rating = "N/A"
+                            category = "Bán lẻ / Dịch vụ"
 
+                            # Phân loại ngành nghề cửa hàng
+                            cat_tag = place_soup.select_one("button[jsaction*='category']")
+                            if cat_tag:
+                                category = clean_text(cat_tag.get_text())
+
+                            # Đánh giá & Rating
                             rating_tag = place_soup.select_one("span.ceRate, div.F7beeb, span[aria-label*='sao']")
                             if rating_tag:
                                 rating = clean_text(rating_tag.get_text())
 
+                            # Quét qua các nút thông tin (SĐT, Địa chỉ, Website)
                             for btn in place_soup.select("button[data-item-id], a[data-item-id]"):
                                 item_id = btn.get("data-item-id", "")
                                 btn_text = clean_text(btn.get_text())
@@ -541,14 +582,16 @@ with tab2:
                                 elif "authority" in item_id:
                                     website = btn_text
 
+                            # Quét dự phòng Regex nếu nút SĐT bị ẩn
                             if phone_number == "Không có":
-                                match = re.search(r"(?:\+84|0)\d{8,10}\b", re.sub(r"[^\d+]", "", place_soup.get_text()))
+                                match = re.search(r"(?:\+84|0)(?:3|5|7|8|9|2)\d{8}\b", re.sub(r"[^\d+]", " ", place_soup.get_text()))
                                 if match:
                                     phone_number = normalize_phone_number(match.group(0))
 
                             gmaps_data.append({
-                                "Tên Địa Điểm": place_name,
+                                "Tên Cửa Hàng / Doanh Nghiệp": place_name,
                                 "Số Điện Thoại": phone_number,
+                                "Loại Hình / Ngành Hàng": category,
                                 "Địa Chỉ": address,
                                 "Khu Vực": gmaps_location,
                                 "Đánh Giá (Rating)": rating,
@@ -568,7 +611,7 @@ with tab2:
         status_gmaps.text("✅ Hoàn tất quá trình cào Google Maps!")
         
         if gmaps_data:
-            st.success(f"🎉 Đã thu thập thành công {len(gmaps_data)} địa điểm mới!")
+            st.success(f"🎉 Đã thu thập thành công {len(gmaps_data)} cửa hàng bán lẻ/địa điểm mới!")
             df_gmaps = pd.DataFrame(gmaps_data)
             st.dataframe(df_gmaps)
 
@@ -577,10 +620,10 @@ with tab2:
                 df_gmaps.to_excel(writer, index=False, sheet_name="Google_Maps")
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            file_name_gmaps = f"gmaps_{timestamp}.xlsx"
+            file_name_gmaps = f"gmaps_lead_{timestamp}.xlsx"
 
             st.download_button(
-                label="📥 Tải file Excel Google Maps",
+                label="📥 Tải file Excel Google Maps Lead",
                 data=buffer_gmaps.getvalue(),
                 file_name=file_name_gmaps,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
