@@ -462,7 +462,6 @@ with tab2:
         gmaps_data = []
         status_gmaps = st.empty()
         
-        # Mở rộng danh sách sub-areas nếu quét theo Quận ở TP.HCM để di chuyển trên bản đồ
         sub_locations = [gmaps_location]
         if "Quận 1" in gmaps_location:
             sub_locations = [
@@ -501,7 +500,6 @@ with tab2:
 
                 unique_urls = []
 
-                # VÒNG LẶP DI CHUYỂN BẢN ĐỒ TỰ ĐỘNG QUA CÁC CỤM KHU VỰC CỦA QUẬN
                 for sub_loc in sub_locations:
                     if len(unique_urls) >= gmaps_max_results:
                         break
@@ -516,7 +514,6 @@ with tab2:
                     except Exception:
                         continue
 
-                    # Cuộn trực tiếp khung danh sách để kích hoạt load cửa hàng mới
                     scroll_count = 0
                     while scroll_count < 10 and len(unique_urls) < gmaps_max_results:
                         scroll_count += 1
@@ -531,7 +528,6 @@ with tab2:
                                 if len(unique_urls) >= gmaps_max_results:
                                     break
 
-                # Lưu vào bộ nhớ tạm
                 for url in unique_urls:
                     st.session_state.history_gmaps_urls.add(url)
 
@@ -540,7 +536,6 @@ with tab2:
                 else:
                     st.write(f"✨ Đã tìm thấy **{len(unique_urls)}** cửa hàng/địa điểm MỚI chưa trùng tại **{gmaps_location}**.")
 
-                    # BẮT ĐẦU TRÍCH XUẤT THÔNG TIN CHI TIẾT
                     for idx, place_url in enumerate(unique_urls, 1):
                         status_gmaps.text(f"⚡ Trích xuất Google Maps [{idx}/{len(unique_urls)}]: Đang lấy thông tin cửa hàng...")
                         try:
@@ -558,17 +553,14 @@ with tab2:
                             rating = "N/A"
                             category = "Bán lẻ / Dịch vụ"
 
-                            # Phân loại ngành nghề cửa hàng
                             cat_tag = place_soup.select_one("button[jsaction*='category']")
                             if cat_tag:
                                 category = clean_text(cat_tag.get_text())
 
-                            # Đánh giá & Rating
                             rating_tag = place_soup.select_one("span.ceRate, div.F7beeb, span[aria-label*='sao']")
                             if rating_tag:
                                 rating = clean_text(rating_tag.get_text())
 
-                            # Quét qua các nút thông tin (SĐT, Địa chỉ, Website)
                             for btn in place_soup.select("button[data-item-id], a[data-item-id]"):
                                 item_id = btn.get("data-item-id", "")
                                 btn_text = clean_text(btn.get_text())
@@ -582,7 +574,6 @@ with tab2:
                                 elif "authority" in item_id:
                                     website = btn_text
 
-                            # Quét dự phòng Regex nếu nút SĐT bị ẩn
                             if phone_number == "Không có":
                                 match = re.search(r"(?:\+84|0)(?:3|5|7|8|9|2)\d{8}\b", re.sub(r"[^\d+]", " ", place_soup.get_text()))
                                 if match:
